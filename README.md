@@ -6,5 +6,6 @@ parameters that describe the format of varargs in a function. Potential uses:
 
 - `g_object_new`
 - `g_log_structured`
+- `g_variant_new` and other `GVariant` functions
 - `soup_server_new`?
 - there was some function in the `gupnp` stack…
