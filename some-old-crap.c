@@ -24,8 +24,7 @@
 #include "tree.h"
 #include "diagnostic.h"
 
-int plugin_is_GPL_compatible;
-
+#if 0
 static tree
 g_tuple_handler (tree *node,
                  tree  name,
@@ -44,11 +43,7 @@ g_tuple_handler (tree *node,
 }
 
 static struct plugin_info g_tuple_plugin_info = { "0.1", "GTuple for varargs" };
-
 static struct attribute_spec g_tuple_attribute_spec = {"g_tuple", 1, -1, false, true, true, g_tuple_handler, false};
-
-#define G_TUPLE_STR_HELP(x) #x
-#define G_TUPLE_STR(x) G_TUPLE_STR_HELP(x)
 
 static void
 g_tuple_register_attributes (void *gcc_data,
@@ -75,21 +70,59 @@ g_tuple_finish_parse_function (void *gcc_data,
            IDENTIFIER_POINTER (DECL_NAME (fndef)));
 }
 
+#endif
+
+int plugin_is_GPL_compatible;
+static struct plugin_info ggp_plugin_info = { "0.1", "GLib GCC plugin" };
+
+typedef struct GgpMain_ GgpMain;
+
+struct GgpMain_
+{
+  char *name;
+  GgpVariantChecker *vc;
+};
+
+static void
+main_finish (void *gcc_data,
+             void *user_data)
+{
+  GgpMain *main = user_data;
+
+  ggp_variant_checker_free (main->vc);
+  GGP_UTIL_UNREGISTER_CALLBACK (main->name, PLUGIN_FINISH);
+  free (main->name);
+  free (main);
+}
+
 int plugin_init (struct plugin_name_args   *plugin_info,
                  struct plugin_gcc_version *version)
 {
+  GgpMain *main;
+
   if (!plugin_default_version_check (version, &gcc_version))
     {
-      puts ("This GCC plugin is for version " G_TUPLE_STR (GCCPLUGIN_VERSION_MAJOR)
-            "." G_TUPLE_STR (GCCPLUGIN_VERSION_MINOR));
+      puts ("This GCC plugin is for version " GGP_UTIL_STR (GCCPLUGIN_VERSION_MAJOR)
+            "." GGP_UTIL_STR (GCCPLUGIN_VERSION_MINOR));
       return 1;
     }
 
   register_callback (plugin_info->base_name,
                      PLUGIN_INFO,
                      NULL /* callback */,
-                     &g_tuple_plugin_info);
+                     &ggp_plugin_info);
 
+  main = malloc (sizeof (GgpMain));
+  main->name = ggp_util_subplugin_name (plugin_info, "main");
+  main->vc = ggp_variant_checker_new (plugin_info);
+
+  register_callback (global_main.name,
+		     PLUGIN_FINISH,
+		     main_finish,
+		     main);
+
+
+  #if 0
   register_callback (plugin_info->base_name,
                      PLUGIN_ATTRIBUTES,
                      g_tuple_register_attributes,
@@ -102,5 +135,7 @@ int plugin_init (struct plugin_name_args   *plugin_info,
                      PLUGIN_FINISH_PARSE_FUNCTION,
                      g_tuple_finish_parse_function,
                      NULL /* user data */);
+  #endif
+
   return 0;
 }
