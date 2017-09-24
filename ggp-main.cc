@@ -1,4 +1,4 @@
-/* This file is part of gcc-glib-plugin.
+/* This file is part of glib-gcc-plugin.
  *
  * Copyright 2017 Krzesimir Nowak
  *
@@ -20,35 +20,41 @@
 #include "ggp-util.hh"
 #include "ggp-vc.hh"
 
-typedef struct GgpMain_ GgpMain;
+#include "diagnostic.h"
 
-struct GgpMain_
+namespace Ggp
 {
-  char *name;
-  GgpVariantChecker *vc;
+
+namespace {
+
+struct Main
+{
+  Main (struct plugin_name_args* plugin_info);
+
+  std::string name;
+  VariantChecker vc;
+  Util::CallbackRegistration finish_unit;
 };
 
-static void
-main_finish (void *gcc_data,
-	     void *user_data)
+void
+main_finish (void* /* gcc_data */,
+             void* user_data)
 {
-  GgpMain *main = static_cast<GgpMain *> (user_data);
-
-  ggp_variant_checker_free (main->vc);
-  GGP_UTIL_UNREGISTER_CALLBACK (main->name, PLUGIN_FINISH);
-  delete[] main->name;
-  delete main;
+  delete static_cast<Main*> (user_data);
 }
+
+Main::Main (struct plugin_name_args* plugin_info)
+  : name {Util::subplugin_name (plugin_info, "main")},
+    vc {plugin_info},
+    finish_unit {name, PLUGIN_FINISH_UNIT, main_finish, this}
+{}
+
+} // namespace
 
 void
-ggp_main_setup (struct plugin_name_args *plugin_info)
+main_setup (struct plugin_name_args* plugin_info)
 {
-  GgpMain *main = new GgpMain;
-  main->name = ggp_util_subplugin_name (plugin_info, "main");
-  main->vc = ggp_variant_checker_new (plugin_info);
-
-  register_callback (main->name,
-                     PLUGIN_FINISH,
-                     main_finish,
-                     main);
+  new Main (plugin_info);
 }
+
+} // namespace Ggp

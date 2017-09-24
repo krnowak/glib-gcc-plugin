@@ -1,4 +1,4 @@
-/* This file is part of gcc-glib-plugin.
+/* This file is part of glib-gcc-plugin.
  *
  * Copyright 2017 Krzesimir Nowak
  *
@@ -21,7 +21,12 @@
 
 #include "gcc-plugin.h"
 
+namespace Ggp
+{
+
 void
-ggp_main_setup (struct plugin_name_args *plugin_info);
+main_setup (struct plugin_name_args* plugin_info);
+
+} // namespace Ggp
 
 #endif /* GGP_MAIN_HH */

@@ -14,9 +14,11 @@
 # You should have received a copy of the GNU General Public License along with
 # gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
 
-all: glib-gcc-plugin.so
+PLUGIN := glib-gcc-plugin.so
 
-CXXFLAGS := -I`gcc -print-file-name=plugin`/include -fno-rtti -O2 -fPIC
+all: $(PLUGIN)
+
+CXXFLAGS := -I`gcc -print-file-name=plugin`/include -fno-rtti -O2 -fPIC -Wall -Wextra -Wpedantic
 
 GGP_CC_HH_SOURCES := ggp-main.cc ggp-util.cc ggp-vc.cc
 
@@ -24,13 +26,13 @@ GGP_SOURCES := $(GGP_CC_HH_SOURCES) ggp-plugin.cc
 
 %.o: Makefile
 
-glib-gcc-plugin.so: $(GGP_SOURCES:.cc=.o)
-	g++ -shared -fno-rtti -fPIC -o plugin.so $^
+$(PLUGIN): $(GGP_SOURCES:.cc=.o)
+	g++ -shared -fno-rtti -fPIC -o $@ $^
 
-test:
-	gcc -fplugin=./glib-gcc-plugin.so -c test.c
+test: $(PLUGIN)
+	gcc -fplugin=./$(PLUGIN) -c test.c
 
 clean:
-	rm $(GGP_SOURCES:.cc=.o) glib-gcc-plugin.so
+	rm -f $(GGP_SOURCES:.cc=.o) $(PLUGIN)
 
 .PHONY: all test clean

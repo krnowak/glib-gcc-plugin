@@ -1,2 +1,4 @@
-/plugin.so
+*~
+*.o
+/glib-gcc-plugin.so
 /test.o
