@@ -19,8 +19,6 @@
 #ifndef GGP_VC_HH
 #define GGP_VC_HH
 
-#include <memory>
-
 #include "ggp-util.hh"
 
 #include "gcc-plugin.h"
