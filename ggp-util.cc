@@ -35,25 +35,25 @@ const char*
 get_event_name (int event)
 {
   switch (event)
-    {
+  {
 #define DEFEVENT(name) case name: return #name;
 #include "plugin.def"
 #undef DEFEVENT
-    default: return "UNKNOWN_OR_DYNAMIC_EVENT";
-    }
+  default: return "UNKNOWN_OR_DYNAMIC_EVENT";
+  }
 }
 
 const char*
 get_code_name (int code)
 {
   switch (code)
-    {
-    case 0: return "PLUGEVT_SUCCESS";
-    case 1: return "PLUGEVT_NO_EVENTS";
-    case 2: return "PLUGEVT_NO_SUCH_EVENT";
-    case 3: return "PLUGEVT_NO_CALLBACK";
-    default: return "UNKNOWN_CODE";
-    }
+  {
+  case 0: return "PLUGEVT_SUCCESS";
+  case 1: return "PLUGEVT_NO_EVENTS";
+  case 2: return "PLUGEVT_NO_SUCH_EVENT";
+  case 3: return "PLUGEVT_NO_CALLBACK";
+  default: return "UNKNOWN_CODE";
+  }
 }
 
 } // namespace
@@ -87,14 +87,14 @@ CallbackRegistration::~CallbackRegistration ()
 {
   int code = ::unregister_callback (plugin_name.c_str (), event);
   if (code != PLUGEVT_SUCCESS)
-    {
-      error ("failed to unregister callback for %s"
-             " event for plugin %s (code %d - %s)",
-             get_event_name (event),
-             plugin_name.c_str (),
-             code,
-             get_code_name (code));
-    }
+  {
+    error ("failed to unregister callback for %s"
+           " event for plugin %s (code %d - %s)",
+           get_event_name (event),
+           plugin_name.c_str (),
+           code,
+           get_code_name (code));
+  }
 }
 
 } // namespace Util

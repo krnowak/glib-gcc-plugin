@@ -32,11 +32,11 @@ plugin_init (struct plugin_name_args* plugin_info,
              struct plugin_gcc_version* version)
 {
   if (!plugin_default_version_check (version, &gcc_version))
-    {
-      puts ("This GCC plugin is for version " GGP_UTIL_STR (GCCPLUGIN_VERSION_MAJOR)
-            "." GGP_UTIL_STR (GCCPLUGIN_VERSION_MINOR));
-      return 1;
-    }
+  {
+    puts ("This GCC plugin is for version " GGP_UTIL_STR (GCCPLUGIN_VERSION_MAJOR)
+          "." GGP_UTIL_STR (GCCPLUGIN_VERSION_MINOR));
+    return 1;
+  }
 
   register_callback (plugin_info->base_name,
                      PLUGIN_INFO,

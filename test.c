@@ -1,14 +1,24 @@
 static void
-foo (char *first, ...) /* __attribute__ ((g_tuple("blah"))) */;
+variant_set (int a, const char *format, ...)  __attribute__ ((glib_variant("set", 2, 3)));
 
 static void
-foo (char *first, ...)
+variant_set (int a, const char *format, ...)
 {
-  /* nothing here */
+
 }
+
+void
+extern_variant_get (int a, const char *format, ...) __attribute__((glib_variant("get", 2, 3)));
+
+/*
+static void
+variant_get (char *format, ...)  __attribute__ ((glib_variant("get", 1, 2)));
+*/
 
 static void
 bar (void)
 {
-  foo ("baz");
+  double d;
+  variant_set (33, "i", 42);
+  extern_variant_get (1, "d", &d);
 }

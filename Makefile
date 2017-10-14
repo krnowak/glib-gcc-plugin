@@ -18,7 +18,7 @@ PLUGIN := glib-gcc-plugin.so
 
 all: $(PLUGIN)
 
-CXXFLAGS := -I`gcc -print-file-name=plugin`/include -fno-rtti -O2 -fPIC -Wall -Wextra -Wpedantic
+CXXFLAGS := -I`gcc -print-file-name=plugin`/include -fno-rtti -O2 -fPIC -Wall -Wextra -Wpedantic -std=c++17 -fdiagnostics-color=auto
 
 GGP_CC_HH_SOURCES := ggp-main.cc ggp-util.cc ggp-vc.cc ggp-tc.cc
 

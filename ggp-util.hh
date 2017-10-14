@@ -39,9 +39,9 @@ subplugin_name (struct plugin_name_args* plugin_info,
 struct CallbackRegistration
 {
   CallbackRegistration (const std::string& plugin_name,
-			int event,
-			plugin_callback_func callback,
-			void* user_data);
+                        int event,
+                        plugin_callback_func callback,
+                        void* user_data);
 
   ~CallbackRegistration ();
 

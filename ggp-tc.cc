@@ -76,28 +76,28 @@ static void
 ggp_tc_finish_decl (void* /* gcc_data */,
                     void* /* user_data */)
 {
-  warning (0, "ggp_tc_finish_decl");
+  //warning (0, "ggp_tc_finish_decl");
 }
 
 static void
 ggp_tc_start_parse_function (void* /* gcc_data */,
                              void* /* user_data */)
 {
-  warning (0, "ggp_tc_start_parse_function");
+  //warning (0, "ggp_tc_start_parse_function");
 }
 
 static void
 ggp_tc_finish_parse_function (void* /* gcc_data */,
                               void* /* user_data */)
 {
-  warning (0, "ggp_tc_finish_parse_function");
+  //warning (0, "ggp_tc_finish_parse_function");
 }
 
 static void
 ggp_tc_attributes (void* /* gcc_data */,
                    void* /* user_data */)
 {
-  warning (0, "ggp_tc_attributes");
+  //warning (0, "ggp_tc_attributes");
 }
 
 } // namespace
