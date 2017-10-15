@@ -21,48 +21,15 @@
 #include "diagnostic.h"
 #include "tree.h"
 #include "dumpfile.h"
+#include "tree-iterator.h"
 
 #include <optional>
+#include <queue>
 
 namespace Ggp
 {
 
 namespace {
-
-void
-ggp_vc_finish_decl (void* /* gcc_data */,
-                    void* /* user_data */)
-{
-  //tree tr = static_cast<tree> (gcc_data);
-  //dump_tree (tr, "  ", 1);
-}
-
-void
-ggp_vc_start_parse_function (void* /* gcc_data */,
-                             void* /* user_data */)
-{
-  //tree tr = static_cast<tree> (gcc_data);
-  //dump_tree (tr, "  ", 1);
-}
-
-void
-ggp_vc_finish_parse_function (void* gcc_data,
-                              void* /* user_data */)
-{
-  // TODO:
-  // cast gcc_data to tree
-  // traverse the tree to find call_exprs
-  // from call_expr take fn
-  // if fn is addr_expr, then there are two ways to get function type
-  //   - type -> pointer type -> pointed type, which is our function type
-  //   - op 0 -> function decl -> type, which is our function type
-  // figure out if fn can be something else than addr_expr
-  // use TYPE_ATTRIBUTES(function_type) to get attribute list
-  // use `for (tree a = attrs; a; a = TREE_CHAIN (a))` to traverse attributes
-  // use `is_attribute_p ("glib_variant", TREE_PURPOSE(a))` to check if it is our attribute
-  // attribute args are in TREE_VALUE(a)
-  dump_node (static_cast<const_tree> (gcc_data), 0, stderr);
-}
 
 std::optional<unsigned HOST_WIDE_INT>
 get_int (tree expr)
@@ -185,6 +152,173 @@ get_format_info_from_args (tree attribute_args)
   return {FormatInfo {maybe_format_type.value(), maybe_string_index.value(), maybe_args_index.value()}};
 }
 
+FormatInfo
+must_get_format_info_from_args (tree attribute_args)
+{
+  auto format_type_string = must_get_string (TREE_VALUE (attribute_args));
+  auto format_type = must_get_format_type (format_type_string);
+  auto string_index = must_get_int (TREE_VALUE (TREE_CHAIN (attribute_args)));
+  auto args_index = must_get_int (TREE_VALUE (TREE_CHAIN (TREE_CHAIN (attribute_args))));
+
+  return FormatInfo {format_type, string_index, args_index};
+}
+
+void
+ggp_vc_finish_decl (void* /* gcc_data */,
+                    void* /* user_data */)
+{
+  //tree tr = static_cast<tree> (gcc_data);
+  //dump_tree (tr, "  ", 1);
+}
+
+void
+ggp_vc_start_parse_function (void* /* gcc_data */,
+                             void* /* user_data */)
+{
+  //tree tr = static_cast<tree> (gcc_data);
+  //dump_tree (tr, "  ", 1);
+}
+
+struct CallSite
+{
+  tree call_expr;
+  tree attribute;
+};
+
+void
+ggp_vc_finish_parse_function (void* gcc_data,
+                              void* /* user_data */)
+{
+  //dump_node (static_cast<const_tree> (gcc_data), 0, stderr);
+  auto function_decl = static_cast<tree> (gcc_data);
+  gcc_assert (TREE_CODE (function_decl) == FUNCTION_DECL);
+
+  auto function_body = DECL_SAVED_TREE (function_decl);
+  gcc_assert (function_body);
+
+  std::queue<tree> trees;
+  std::vector<tree> call_exprs;
+  std::vector<CallSite> call_sites;
+  trees.push (static_cast<tree> (gcc_data));
+
+  while (!trees.empty ())
+  {
+    auto queued_tree {trees.front ()};
+    trees.pop ();
+
+    if (queued_tree == nullptr)
+    {
+      continue;
+    }
+
+    switch (TREE_CODE (queued_tree))
+    {
+    case FUNCTION_DECL:
+      trees.push (DECL_SAVED_TREE (queued_tree));
+      break;
+
+    case BIND_EXPR:
+      // operand 1 is a body (0 are variable declarations)
+      trees.push (TREE_OPERAND (queued_tree, 1));
+      break;
+
+    case STATEMENT_LIST:
+      {
+        for (auto tsi = tsi_start (queued_tree); !tsi_end_p (tsi); tsi_next (&tsi))
+        {
+          trees.push (tsi_stmt (tsi));
+        }
+        break;
+      }
+
+    case CALL_EXPR:
+      call_exprs.push_back (queued_tree);
+      break;
+
+    default:
+      break;
+    }
+  }
+
+  for (auto call_expr : call_exprs)
+  {
+    auto called_function = CALL_EXPR_FN (call_expr);
+    if (TREE_CODE (called_function) != ADDR_EXPR)
+    {
+      continue;
+    }
+    auto function_decl = TREE_OPERAND (called_function, 0);
+    if (TREE_CODE (function_decl) != FUNCTION_DECL)
+    {
+      continue;
+    }
+    auto function_type = TREE_TYPE (function_decl);
+    if (TREE_CODE (function_type) != FUNCTION_TYPE)
+    {
+      continue;
+    }
+    for (auto attr = TYPE_ATTRIBUTES(function_type); attr; attr = TREE_CHAIN (attr))
+    {
+      if (is_attribute_p ("glib_variant", TREE_PURPOSE (attr)))
+      {
+        call_sites.push_back ({call_expr, attr});
+        break;
+      }
+    }
+  }
+
+  for (auto call_site : call_sites)
+  {
+    warning (0, "called a glib_variant function %s", IDENTIFIER_POINTER (DECL_NAME (TREE_OPERAND (CALL_EXPR_FN (call_site.call_expr), 0))));
+    auto format_info = must_get_format_info_from_args (TREE_VALUE (call_site.attribute));
+
+    auto arg = NULL_TREE;
+    call_expr_arg_iterator ceai;
+    unsigned int idx = 0;
+    auto format_param = NULL_TREE;
+    std::vector<tree> format_arg_params;
+
+    FOR_EACH_CALL_EXPR_ARG (arg, ceai, call_site.call_expr)
+    {
+      ++idx;
+      if (idx == format_info.string_index)
+      {
+        format_param = arg;
+      }
+      else if (idx >= format_info.args_index)
+      {
+        format_arg_params.push_back (arg);
+      }
+    }
+
+    const char *format = nullptr;
+
+    if (TREE_CODE (format_param) == NOP_EXPR)
+    {
+      auto nop_op_0 = TREE_OPERAND (format_param, 0);
+      if (TREE_CODE (nop_op_0) == ADDR_EXPR)
+      {
+        auto addr_op_0 = TREE_OPERAND (nop_op_0, 0);
+        if (TREE_CODE (addr_op_0) == STRING_CST)
+        {
+          format = TREE_STRING_POINTER (addr_op_0);
+        }
+      }
+    }
+    if (format)
+    {
+      warning (0, "format: %s", format);
+    }
+    else
+    {
+      warning (0, "format is not a string literal");
+      continue;
+    }
+    // TODO: parse format, get a number of expected parameters and
+    // their types, compare to actual passed parameters.
+  }
+}
+
 bool
 is_ptr_to_char (tree param)
 {
@@ -195,9 +329,9 @@ is_ptr_to_char (tree param)
 
 tree
 vc_handler (tree* node,
-            tree name,
+            tree /* name */,
             tree args,
-            int flags,
+            int /* flags */,
             bool* no_add_attrs)
 {
   auto maybe_format_info {get_format_info_from_args (args)};
