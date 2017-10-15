@@ -19,6 +19,7 @@
 #ifndef GGP_UTIL_HH
 #define GGP_UTIL_HH
 
+#include <memory>
 #include <string>
 
 #include "gcc-plugin.h"
@@ -48,6 +49,53 @@ struct CallbackRegistration
 private:
   std::string plugin_name;
   int event;
+};
+
+// after it is moved, it can only be destroyed
+template <typename T>
+class Value
+{
+public:
+  Value() = delete;
+  template <typename... Args>
+  Value(Args&&... args)
+    : ptr {std::make_unique<T> (std::forward<Args> (args)...)}
+  {}
+
+  template <typename U>
+  Value(Value<U>&& u) noexcept
+    : ptr {std::move (u.ptr)}
+  {}
+
+  template <typename U>
+  Value(const Value<U>& u) = delete;
+  ~Value() noexcept = default;
+
+  template <typename U>
+  Value
+  operator= (Value<U>&& u) noexcept
+  {
+    ptr = std::move (u.ptr);
+  }
+
+  template <typename U>
+  Value
+  operator= (const Value<U>& u) = delete;
+
+  void
+  swap(Value& other) noexcept
+  {
+    ptr.swap (other.ptr);
+  }
+
+  operator T&()
+  {
+    gcc_assert (ptr.get() != nullptr);
+    return *(ptr.get());
+  }
+
+private:
+  std::unique_ptr<T> ptr;
 };
 
 } // namespace Util
