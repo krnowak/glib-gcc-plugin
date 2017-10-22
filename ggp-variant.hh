@@ -22,6 +22,7 @@
 #include "ggp-util.hh"
 
 #include <cstdint>
+#include <optional>
 #include <string_view>
 #include <variant>
 #include <vector>
@@ -30,17 +31,34 @@ namespace Ggp
 {
 
 // variant type
+namespace VT
+{
 
-enum struct Basic : std::uint8_t;
-struct Variant;
-struct AnyTuple;
-struct Any;
-struct Array;
-struct Maybe;
-struct Tuple;
-struct Entry;
+enum class Basic : std::uint8_t;
+struct Variant; // v
+struct AnyTuple; // r
+struct AnyType; // *
+struct Array; // a
+struct Maybe; // m
+struct Tuple; // ()
+struct Entry; // {}
 
-using VariantType = std::variant<Basic, Maybe, Tuple, Array, Entry, Variant, AnyTuple, Any>;
+} // namespace VT
+
+using VariantType = std::variant
+  <
+  VT::Basic,
+  VT::Maybe,
+  VT::Tuple,
+  VT::Array,
+  VT::Entry,
+  VT::Variant,
+  VT::AnyTuple,
+  VT::AnyType
+  >;
+
+namespace VT
+{
 
 enum class Basic : std::uint8_t
 {
@@ -60,7 +78,7 @@ enum class Basic : std::uint8_t
   Any // ?
 };
 
-struct Any
+struct AnyType
 {
 };
 
@@ -93,57 +111,153 @@ struct Entry
   Util::Value<VariantType> value;
 };
 
-VariantType
+} // namespace VT
+
+std::optional<VariantType>
 parse_variant_type_string (std::string_view const& string);
 
 // variant format
+namespace VF
+{
+
+struct AtBasicType;
+enum class Pointer : std::uint8_t;
 
 struct AtVariantType;
-enum class ConvenienceFormat : std::uint8_t;
-struct MaybeFormat;
-struct TupleFormat;
-struct EntryFormat;
+enum class BasicMaybePointer : std::uint8_t;
+struct Convenience;
 
-using VariantFormat = std::variant<VariantType, AtVariantType, ConvenienceFormat, MaybeFormat, TupleFormat, EntryFormat>;
+enum class BasicMaybeBool : std::uint8_t;
+struct Tuple;
+struct Entry;
+struct Maybe;
+
+using BasicFormat = std::variant
+  <
+  VT::Basic,
+  AtBasicType,
+  Pointer
+  >;
+
+using MaybePointer = std::variant
+  <
+  VT::Array,
+  AtVariantType,
+  BasicMaybePointer,
+  VT::Variant,
+  VT::AnyType,
+  VT::AnyTuple,
+  Pointer,
+  Convenience
+  >;
+
+using MaybeBool = std::variant
+  <
+  BasicMaybeBool,
+  Entry,
+  Tuple,
+  Maybe
+  >;
+
+} // namespace VF
+
+using VariantFormat = std::variant
+  <
+  VariantType,
+  VF::AtVariantType,
+  VF::Pointer,
+  VF::Convenience,
+  VF::MaybePointer,
+  VF::MaybeBool,
+  VF::Tuple,
+  VF::Entry
+  >;
+
+namespace VF
+{
+
+struct AtBasicType
+{
+  VT::Basic basic;
+};
+
+enum class Pointer : std::uint8_t
+{
+  String,
+  ObjectPath,
+  Signature
+};
 
 struct AtVariantType
 {
   VariantType type;
 };
 
-enum class ConvenienceFormat : std::uint8_t
+enum class BasicMaybePointer : std::uint8_t
 {
-  StringPtr, // &s
-  ObjectPathPtr, // &o,
-  SignaturePtr, // &g
-  StringArray, // ^as
-  StringPtrArray, // ^a&s,
-  ObjectPathArray, // ^ao
-  ObjectPathPtrArray, // ^a&o
-  ByteArray, // ^ay
-  ByteArrayPtr, // ^&ay
-  ByteArrayArray, // ^aay,
-  ByteArrayPtrArray, // ^a&ay
+  String,
+  ObjectPath,
+  Signature,
+  Any
 };
 
-struct MaybeFormat
+struct Convenience
 {
-  Util::Value<VariantFormat> format;
+  enum class Type : std::uint8_t
+  {
+    StringArray,
+    ObjectPathArray,
+    ByteString,
+    ByteStringArray
+  };
+
+  enum class Kind : std::uint8_t
+  {
+    Constant,
+    Duplicated
+  };
+
+  Type type;
+  Kind kind;
 };
 
-struct TupleFormat
+enum class BasicMaybeBool : std::uint8_t
+{
+  Bool, // b
+  Byte, // y
+  I16,  // n
+  U16,  // q
+  I32,  // i
+  U32,  // u
+  I64,  // x
+  U64,  // t
+  Handle, // h
+  Double // d
+};
+
+struct Tuple
 {
   std::vector<VariantFormat> formats;
 };
 
-struct EntryFormat
+struct Entry
 {
-  Util::Value<VariantFormat> key;
+  BasicFormat key;
   Util::Value<VariantFormat> value;
 };
 
-VariantFormat
+struct Maybe
+{
+  std::variant<MaybePointer, Util::Value<MaybeBool>> kind;
+};
+
+} // namespace VF
+
+std::optional<VariantFormat>
 parse_variant_format_string (std::string_view const& string);
+
+VariantType
+variant_format_to_type (VariantFormat const& format);
 
 } // namespace Ggp
 
