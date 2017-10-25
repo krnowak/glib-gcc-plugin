@@ -167,8 +167,7 @@ using VariantFormat = std::variant
   VF::AtVariantType,
   VF::Pointer,
   VF::Convenience,
-  VF::MaybePointer,
-  VF::MaybeBool,
+  VF::Maybe,
   VF::Tuple,
   VF::Entry
   >;

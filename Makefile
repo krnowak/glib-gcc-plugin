@@ -18,7 +18,17 @@ PLUGIN := glib-gcc-plugin.so
 
 all: $(PLUGIN)
 
-CXXFLAGS := -I`gcc -print-file-name=plugin`/include -fno-rtti -O2 -fPIC -Wall -Wextra -Wpedantic -std=c++17 -fdiagnostics-color=auto
+ifeq ($(CXX),g++)
+COMPILER_CXXFLAGS := -std=c++17
+endif
+ifeq ($(CXX),clang++)
+COMPILER_CXXFLAGS := -std=c++1z --stdlib=libc++
+endif
+ifeq ($(COMPILER_CXXFLAGS),)
+$(error unknown compiler $(CXX), use clang++ or g++)
+endif
+
+CXXFLAGS := -I`gcc -print-file-name=plugin`/include -fno-rtti -O2 -fPIC -Wall -Wextra -Wpedantic $(COMPILER_CXXFLAGS) -fdiagnostics-color=auto
 
 GGP_CC_HH_SOURCES := ggp-main.cc ggp-util.cc ggp-vc.cc ggp-tc.cc ggp-variant.cc
 

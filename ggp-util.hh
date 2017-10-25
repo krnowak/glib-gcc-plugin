@@ -56,39 +56,58 @@ template <typename T>
 class Value
 {
 public:
-  Value() = delete;
+  Value () = delete;
   template <typename... Args>
-  Value(Args&&... args)
+  Value (Args&&... args)
     : ptr {std::make_unique<T> (std::forward<Args> (args)...)}
   {}
 
-  template <typename U>
-  Value(Value<U>&& u) noexcept
+  Value (Value&& u) noexcept
     : ptr {std::move (u.ptr)}
   {}
 
   template <typename U>
-  Value(const Value<U>& u) = delete;
-  ~Value() noexcept = default;
+  Value (Value<U>&& u) noexcept
+    : ptr {std::move (u.ptr)}
+  {}
 
   template <typename U>
-  Value
+  Value (Value<U> const& u)
+    : ptr {std::make_unique<T> (*(u.ptr))}
+  {}
+
+  Value (Value const& u)
+    : ptr {std::make_unique<T> (*(u.ptr))}
+  {}
+
+  ~Value () noexcept = default;
+
+  template <typename U>
+  Value&
   operator= (Value<U>&& u) noexcept
   {
-    ptr = std::move (u.ptr);
+    Value tmp {std::move (u)};
+
+    swap (tmp);
+    return *this;
   }
 
   template <typename U>
-  Value
-  operator= (const Value<U>& u) = delete;
+  Value&
+  operator= (const Value<U>& u)
+  {
+    Value tmp {u};
+    swap (tmp);
+    return *this;
+  }
 
   void
-  swap(Value& other) noexcept
+  swap (Value& other) noexcept
   {
     ptr.swap (other.ptr);
   }
 
-  operator T&()
+  operator T& () noexcept
   {
     gcc_assert (ptr.get() != nullptr);
     return *(ptr.get());
@@ -97,6 +116,9 @@ public:
 private:
   std::unique_ptr<T> ptr;
 };
+
+template<class... TypeP> struct VisitHelper : TypeP... { using TypeP::operator()...; };
+template<class... TypeP> VisitHelper(TypeP...) -> VisitHelper<TypeP...>;
 
 } // namespace Util
 

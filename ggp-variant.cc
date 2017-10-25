@@ -24,17 +24,14 @@ namespace Ggp
 namespace
 {
 
-struct ParseTypeResult
+template <typename ParsedP>
+struct ParseResult
 {
-  VariantType type;
+  ParsedP parsed;
   std::string_view rest;
 };
 
-struct ParseBasicTypeResult
-{
-  VT::Basic basic;
-  std::string_view rest;
-};
+using ParseBasicTypeResult = ParseResult<VT::Basic>;
 
 std::optional<ParseBasicTypeResult>
 parse_basic_type (std::string_view const& string)
@@ -44,7 +41,7 @@ parse_basic_type (std::string_view const& string)
     return {};
   }
 
-  auto rest = string.substr (1);
+  auto rest {string.substr (1)};
   switch (string.front ())
   {
   case 'b':
@@ -80,6 +77,63 @@ parse_basic_type (std::string_view const& string)
   }
 }
 
+using ParseTypeResult = ParseResult<VariantType>;
+
+std::optional<ParseTypeResult>
+parse_single_type (std::string_view const& string);
+
+using ParseEntryTypeResult = ParseResult<VT::Entry>;
+
+std::optional<ParseEntryTypeResult>
+parse_entry_type (std::string_view const& string)
+{
+  auto maybe_first_result {parse_basic_type (string)};
+  if (!maybe_first_result)
+  {
+    return {};
+  }
+  auto maybe_second_result {parse_single_type (maybe_first_result->rest)};
+  if (!maybe_second_result)
+  {
+    return {};
+  }
+  if (maybe_second_result->rest.empty ())
+  {
+    return {};
+  }
+  if (maybe_second_result->rest.front () != '}')
+  {
+    return {};
+  }
+  return {{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->rest.substr (1)}};
+}
+
+using ParseTupleTypeResult = ParseResult<VT::Tuple>;
+
+std::optional<ParseTupleTypeResult>
+parse_tuple_type (std::string_view string)
+{
+  std::vector<VariantType> types {};
+  for (;;)
+  {
+    if (string.empty ())
+    {
+      return {};
+    }
+    if (string.front () == ')')
+    {
+      return {{{std::move (types)}, string.substr (1)}};
+    }
+    auto maybe_result {parse_single_type (string)};
+    if (!maybe_result)
+    {
+      return {};
+    }
+    string = std::move (maybe_result->rest);
+    types.push_back (std::move (maybe_result->parsed));
+  }
+}
+
 std::optional<ParseTypeResult>
 parse_single_type (std::string_view const& string)
 {
@@ -88,52 +142,26 @@ parse_single_type (std::string_view const& string)
     return {};
   }
 
-  auto rest = string.substr (1);
+  auto rest {string.substr (1)};
   switch (string.front ())
   {
   case '{':
     {
-      auto maybe_first_result {parse_basic_type (rest)};
-      if (!maybe_first_result)
+      auto maybe_result {parse_entry_type (rest)};
+      if (!maybe_result)
       {
         return {};
       }
-      auto maybe_second_result {parse_single_type (maybe_first_result->rest)};
-      if (!maybe_second_result)
-      {
-        return {};
-      }
-      if (maybe_second_result->rest.empty ())
-      {
-        return {};
-      }
-      if (maybe_second_result->rest.front () != '}')
-      {
-        return {};
-      }
-      return {{VT::Entry {std::move (maybe_first_result->basic), std::move (maybe_second_result->type)}, maybe_second_result->rest.substr (1)}};
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
     }
   case '(':
     {
-      std::vector<VariantType> types {};
-      for (;;)
+      auto maybe_result {parse_tuple_type (rest)};
+      if (!maybe_result)
       {
-        if (rest.empty ())
-        {
-          return {};
-        }
-        if (rest.front () == ')')
-        {
-          return {{VT::Tuple {std::move (types)}, rest.substr (1)}};
-        }
-        auto maybe_result {parse_single_type (rest)};
-        if (!maybe_result)
-        {
-          return {};
-        }
-        rest = std::move (maybe_result->rest);
-        types.push_back (std::move (maybe_result->type));
+        return {};
       }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
     }
   case 'm':
     {
@@ -142,7 +170,7 @@ parse_single_type (std::string_view const& string)
       {
         return {};
       }
-      return {{VT::Maybe {std::move (maybe_result->type)}, std::move (maybe_result->rest)}};
+      return {{VT::Maybe {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
     }
   case 'a':
     {
@@ -151,7 +179,7 @@ parse_single_type (std::string_view const& string)
       {
         return {};
       }
-      return {{VT::Array {std::move (maybe_result->type)}, std::move (maybe_result->rest)}};
+      return {{VT::Array {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
     }
   case '*':
     return {{VT::AnyType {}, std::move (rest)}};
@@ -168,7 +196,7 @@ parse_single_type (std::string_view const& string)
         return {};
       }
 
-      return {{std::move (maybe_result->basic), std::move (maybe_result->rest)}};
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
     }
   }
 }
@@ -189,30 +217,309 @@ parse_variant_type_string (std::string_view const& string)
     return {};
   }
 
-  return {std::move (maybe_result->type)};
+  return {std::move (maybe_result->parsed)};
 }
 
 namespace
 {
 
-struct ParseBasicFormatResult
+using ParsePointerFormatResult = ParseResult<VF::Pointer>;
+
+std::optional<ParsePointerFormatResult>
+parse_pointer_format (std::string_view const& string)
 {
-  VF::BasicFormat basic;
-  std::string_view rest;
-};
+  if (string.empty ())
+  {
+    return {};
+  }
+  auto rest {string.substr (1)};
+  switch (string.front ())
+  {
+  case 's':
+    return {{VF::Pointer::String, std::move (rest)}};
+  case 'o':
+    return {{VF::Pointer::ObjectPath, std::move (rest)}};
+  case 'g':
+    return {{VF::Pointer::Signature, std::move (rest)}};
+  default:
+    return {};
+  }
+}
+
+using ParseBasicFormatResult = ParseResult<VF::BasicFormat>;
 
 std::optional<ParseBasicFormatResult>
-parse_basic_format (std::string_view const& /* string */)
+parse_basic_format (std::string_view const& string)
 {
-  // TODO
+  if (string.empty ())
+  {
+    return {};
+  }
+  auto rest {string.substr (1)};
+  switch (string.front ())
+  {
+  case '@':
+    {
+      auto maybe_result {parse_basic_type (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{VF::AtBasicType {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
+    }
+  case '&':
+    {
+      auto maybe_result {parse_pointer_format (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  default:
+    {
+      auto maybe_result {parse_basic_type (string)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  }
+}
+
+using ParseConvenienceFormatResult = ParseResult<VF::Convenience>;
+
+std::optional<ParseConvenienceFormatResult>
+parse_convenience_format (std::string_view const& string)
+{
+  auto len {4u};
+  auto sub {string.substr (0, len)};
+  if (sub == "a&ay")
+  {
+    return {{{VF::Convenience::Type::ByteStringArray, VF::Convenience::Kind::Constant}, string.substr (len)}};
+  }
+
+  len = 3;
+  sub = string.substr (0, len);
+  if (sub == "aay")
+  {
+    return {{{VF::Convenience::Type::ByteStringArray, VF::Convenience::Kind::Duplicated}, string.substr (len)}};
+  }
+  if (sub == "&ay")
+  {
+    return {{{VF::Convenience::Type::ByteString, VF::Convenience::Kind::Constant}, string.substr (len)}};
+  }
+  if (sub == "a&o")
+  {
+    return {{{VF::Convenience::Type::ObjectPathArray, VF::Convenience::Kind::Constant}, string.substr (len)}};
+  }
+  if (sub == "a&s")
+  {
+    return {{{VF::Convenience::Type::StringArray, VF::Convenience::Kind::Constant}, string.substr (len)}};
+  }
+
+  len = 2;
+  sub = string.substr (0, len);
+  if (sub == "as")
+  {
+    return {{{VF::Convenience::Type::StringArray, VF::Convenience::Kind::Duplicated}, string.substr (len)}};
+  }
+  if (sub == "ao")
+  {
+    return {{{VF::Convenience::Type::ObjectPathArray, VF::Convenience::Kind::Duplicated}, string.substr (len)}};
+  }
+  if (sub == "ay")
+  {
+    return {{{VF::Convenience::Type::ByteString, VF::Convenience::Kind::Duplicated}, string.substr (len)}};
+  }
   return {};
 }
 
-struct ParseFormatResult
+using ParseTupleFormat = ParseResult<VF::Tuple>;
+using ParseFormatResult = ParseResult<VariantFormat>;
+
+std::optional<ParseFormatResult>
+parse_single_format (std::string_view const& string);
+
+std::optional<ParseTupleFormat>
+parse_tuple_format (std::string_view string)
 {
-  VariantFormat format;
-  std::string_view rest;
-};
+  std::vector<VariantFormat> formats {};
+
+  for (;;)
+  {
+    if (string.empty ())
+    {
+      return {};
+    }
+    if (string.front () == ')')
+    {
+      ParseTupleFormat f {{std::move (formats)}, string.substr (1)};
+      return {std::move (f)};
+    }
+    auto maybe_result {parse_single_format (string)};
+    if (!maybe_result)
+    {
+      return {};
+    }
+    string = std::move (maybe_result->rest);
+    formats.push_back (std::move (maybe_result->parsed));
+  }
+}
+
+using ParseEntryFormatResult = ParseResult<VF::Entry>;
+
+std::optional<ParseEntryFormatResult>
+parse_entry_format (std::string_view const& string)
+{
+  auto maybe_first_result {parse_basic_format (string)};
+  if (!maybe_first_result)
+  {
+    return {};
+  }
+  auto maybe_second_result {parse_single_format (maybe_first_result->rest)};
+  if (!maybe_second_result)
+  {
+    return {};
+  }
+  if (maybe_second_result->rest.empty ())
+  {
+    return {};
+  }
+  if (maybe_second_result->rest.front () != '}')
+  {
+    return {};
+  }
+  return {{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->rest.substr (1)}};
+}
+
+using ParseMaybeFormatResult = ParseResult<VF::Maybe>;
+
+std::optional<ParseMaybeFormatResult>
+parse_maybe_format (std::string_view const& string)
+{
+  if (string.empty ())
+  {
+    return {};
+  }
+  auto rest = string.substr (1);
+  switch (string.front ())
+  {
+    // pointer maybes
+  case 'a':
+    {
+      auto maybe_result {parse_single_type (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::MaybePointer {VT::Array {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
+    }
+  case '@':
+    {
+      auto maybe_result {parse_single_type (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::MaybePointer {VF::AtVariantType {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
+    }
+  case 'v':
+    return {{{VF::MaybePointer {VT::Variant {}}}, std::move (rest)}};
+  case '*':
+    return {{{VF::MaybePointer {VT::AnyType {}}}, std::move (rest)}};
+  case 'r':
+    return {{{VF::MaybePointer {VT::AnyTuple {}}}, std::move (rest)}};
+  case '&':
+    {
+      auto maybe_result {parse_pointer_format (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::MaybePointer {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+    }
+  case '^':
+    {
+      auto maybe_result {parse_convenience_format (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::MaybePointer {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+    }
+    // bool maybes
+  case '{':
+    {
+      auto maybe_result {parse_entry_format (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::MaybeBool {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+    }
+  case '(':
+    {
+      auto maybe_result {parse_tuple_format (std::move (rest))};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::MaybeBool {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+    }
+  case 'm':
+    {
+      auto maybe_result {parse_maybe_format (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::MaybeBool {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+    }
+    // basic maybes, need to decide whether a pointer or bool
+  default:
+    {
+      auto maybe_result {parse_basic_type (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      switch (maybe_result->parsed)
+      {
+      case VT::Basic::String:
+        return {{{VF::MaybePointer {VF::BasicMaybePointer::String}}, std::move (maybe_result->rest)}};
+      case VT::Basic::ObjectPath:
+        return {{{VF::MaybePointer {VF::BasicMaybePointer::ObjectPath}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Signature:
+        return {{{VF::MaybePointer {VF::BasicMaybePointer::Signature}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Any:
+        return {{{VF::MaybePointer {VF::BasicMaybePointer::Any}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Bool:
+        return {{{VF::MaybeBool {VF::BasicMaybeBool::Bool}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Byte:
+        return {{{VF::MaybeBool {VF::BasicMaybeBool::Byte}}, std::move (maybe_result->rest)}};
+      case VT::Basic::I16:
+        return {{{VF::MaybeBool {VF::BasicMaybeBool::I16}}, std::move (maybe_result->rest)}};
+      case VT::Basic::U16:
+        return {{{VF::MaybeBool {VF::BasicMaybeBool::U16}}, std::move (maybe_result->rest)}};
+      case VT::Basic::I32:
+        return {{{VF::MaybeBool {VF::BasicMaybeBool::I32}}, std::move (maybe_result->rest)}};
+      case VT::Basic::U32:
+        return {{{VF::MaybeBool {VF::BasicMaybeBool::U32}}, std::move (maybe_result->rest)}};
+      case VT::Basic::I64:
+        return {{{VF::MaybeBool {VF::BasicMaybeBool::I64}}, std::move (maybe_result->rest)}};
+      case VT::Basic::U64:
+        return {{{VF::MaybeBool {VF::BasicMaybeBool::U64}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Handle:
+        return {{{VF::MaybeBool {VF::BasicMaybeBool::Handle}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Double:
+        return {{{VF::MaybeBool {VF::BasicMaybeBool::Double}}, std::move (maybe_result->rest)}};
+      }
+      return {};
+    }
+  }
+}
 
 std::optional<ParseFormatResult>
 parse_single_format (std::string_view const& string)
@@ -227,129 +534,66 @@ parse_single_format (std::string_view const& string)
   {
   case '@':
     {
-      auto maybe_result = parse_single_type (rest);
+      auto maybe_result {parse_single_type (rest)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{VF::AtVariantType{std::move (maybe_result->type)}, std::move (maybe_result->rest)}};
+      return {{VF::AtVariantType {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
     }
   case '&':
     {
-      if (rest.empty ())
-      {
-        return {};
-      }
-      auto pointer_rest = rest.substr (1);
-      switch (rest.front ())
-      {
-      case 's':
-        return {{VF::Pointer::String, std::move (pointer_rest)}};
-      case 'o':
-        return {{VF::Pointer::ObjectPath, std::move (pointer_rest)}};
-      case 'g':
-        return {{VF::Pointer::Signature, std::move (pointer_rest)}};
-      default:
-        return {};
-      }
-    }
-  case '^':
-    {
-      auto s4 = rest.substr(0, 4);
-      if (s4 == "a&ay")
-      {
-        return {{VF::Convenience {VF::Convenience::Type::ByteStringArray, VF::Convenience::Kind::Constant}, rest.substr (4)}};
-      }
-      auto s3 = rest.substr(0, 3);
-      if (s3 == "aay")
-      {
-        return {{VF::Convenience {VF::Convenience::Type::ByteStringArray, VF::Convenience::Kind::Duplicated}, rest.substr (3)}};
-      }
-      if (s3 == "&ay")
-      {
-        return {{VF::Convenience {VF::Convenience::Type::ByteString, VF::Convenience::Kind::Constant}, rest.substr (3)}};
-      }
-      if (s3 == "a&o")
-      {
-        return {{VF::Convenience {VF::Convenience::Type::ObjectPathArray, VF::Convenience::Kind::Constant}, rest.substr (3)}};
-      }
-      if (s3 == "a&s")
-      {
-        return {{VF::Convenience {VF::Convenience::Type::StringArray, VF::Convenience::Kind::Constant}, rest.substr (3)}};
-      }
-      auto s2 = rest.substr(0, 2);
-      if (s2 == "as")
-      {
-        return {{VF::Convenience {VF::Convenience::Type::StringArray, VF::Convenience::Kind::Duplicated}, rest.substr (2)}};
-      }
-      if (s2 == "ao")
-      {
-        return {{VF::Convenience {VF::Convenience::Type::ObjectPathArray, VF::Convenience::Kind::Duplicated}, rest.substr (2)}};
-      }
-      if (s2 == "ay")
-      {
-        return {{VF::Convenience {VF::Convenience::Type::ByteString, VF::Convenience::Kind::Duplicated}, rest.substr (2)}};
-      }
-      return {};
-    }
-  case 'm':
-    {
-      // TODO
-      return {};
-    }
-  case '(':
-    {
-      std::vector<VariantFormat> formats {};
-      for (;;)
-      {
-        if (rest.empty ())
-        {
-          return {};
-        }
-        if (rest.front () == ')')
-        {
-          return {{VF::Tuple {std::move (formats)}, rest.substr (1)}};
-        }
-        auto maybe_result {parse_single_format (rest)};
-        if (!maybe_result)
-        {
-          return {};
-        }
-        rest = std::move (maybe_result->rest);
-        formats.push_back (std::move (maybe_result->format));
-      }
-      return {};
-    }
-  case '{':
-    {
-      auto maybe_first_result {parse_basic_format (rest)};
-      if (!maybe_first_result)
-      {
-        return {};
-      }
-      auto maybe_second_result {parse_single_format (maybe_first_result->rest)};
-      if (!maybe_second_result)
-      {
-        return {};
-      }
-      if (maybe_second_result->rest.empty ())
-      {
-        return {};
-      }
-      if (maybe_second_result->rest.front () != '}')
-      {
-        return {};
-      }
-      return {{VF::Entry {std::move (maybe_first_result->basic), std::move (maybe_second_result->format)}, maybe_second_result->rest.substr (1)}};
-    }
-  default:
-    {
-      auto maybe_result = parse_single_type (rest);
+      auto maybe_result {parse_pointer_format (rest)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{std::move (maybe_result->type), std::move (maybe_result->rest)}};
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  case '^':
+    {
+      auto maybe_result {parse_convenience_format (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  case 'm':
+    {
+      auto maybe_result {parse_maybe_format (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  case '(':
+    {
+      auto maybe_result {parse_tuple_format (std::move (rest))};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  case '{':
+    {
+      auto maybe_result {parse_entry_format (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  default:
+    {
+      auto maybe_result {parse_single_type (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
     }
   }
 }
@@ -370,14 +614,42 @@ parse_variant_format_string (std::string_view const& string)
     return {};
   }
 
-  return {std::move (maybe_result->format)};
+  return {std::move (maybe_result->parsed)};
 }
 
-VariantType
-variant_format_to_type (VariantFormat const& /* format */)
+namespace
 {
-  // TODO
-  return VariantType {VT::Basic::I32};
+
+VariantType
+pointer_to_variant_type (VF::Pointer pointer)
+{
+  switch (pointer)
+  {
+  case VF::Pointer::String:
+    return {VT::Basic::String};
+  case VF::Pointer::ObjectPath:
+    return {VT::Basic::ObjectPath};
+  case VF::Pointer::Signature:
+    return {VT::Basic::Signature};
+  default:
+    gcc_unreachable();
+    return {VT::Basic::String};
+  }
+}
+
+} // anonymous namespace
+
+VariantType
+variant_format_to_type (VariantFormat const& format)
+{
+  auto v = Util::VisitHelper {
+    [](VariantType const& variant_type) { return variant_type; },
+    [](VF::AtVariantType const& at_variant_type) { return at_variant_type.type; },
+    [](VF::Pointer pointer) { return pointer_to_variant_type (pointer); },
+    // TODO: handle Convenience, Maybe, Tuple and Entry
+    [](auto /* arg */) { return VariantType {VT::Basic::I32}; },
+  };
+  return std::visit (v, format);
 }
 
 } // namespace Ggp
