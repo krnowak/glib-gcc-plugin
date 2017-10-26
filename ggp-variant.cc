@@ -18,6 +18,9 @@
 
 #include "ggp-variant.hh"
 
+#include <algorithm>
+#include <iterator>
+
 namespace Ggp
 {
 
@@ -403,7 +406,7 @@ parse_maybe_format (std::string_view const& string)
   {
     return {};
   }
-  auto rest = string.substr (1);
+  auto rest {string.substr (1)};
   switch (string.front ())
   {
     // pointer maybes
@@ -620,21 +623,169 @@ parse_variant_format_string (std::string_view const& string)
 namespace
 {
 
-VariantType
-pointer_to_variant_type (VF::Pointer pointer)
+VT::Basic
+pointer_to_basic_type (VF::Pointer pointer)
 {
   switch (pointer)
   {
   case VF::Pointer::String:
-    return {VT::Basic::String};
+    return VT::Basic::String;
   case VF::Pointer::ObjectPath:
-    return {VT::Basic::ObjectPath};
+    return VT::Basic::ObjectPath;
   case VF::Pointer::Signature:
-    return {VT::Basic::Signature};
+    return VT::Basic::Signature;
   default:
     gcc_unreachable();
+    return VT::Basic::String;
+  }
+}
+
+VariantType
+convenience_to_variant_type (VF::Convenience const& convenience)
+{
+  switch (convenience.type)
+  {
+  case VF::Convenience::Type::StringArray:
+    return {VT::Array {VT::Basic::String}};
+  case VF::Convenience::Type::ObjectPathArray:
+    return {VT::Array {VT::Basic::ObjectPath}};
+  case VF::Convenience::Type::ByteString:
+    return {VT::Array {VT::Basic::Byte}};
+  case VF::Convenience::Type::ByteStringArray:
+    return {VT::Array {VT::Array {VT::Basic::Byte}}};
+  default:
+    gcc_unreachable();
+    return {VT::Array {VT::Basic::String}};
+  }
+}
+
+VariantType
+basic_maybe_pointer_to_variant_type (VF::BasicMaybePointer const& bmp)
+{
+  switch (bmp)
+  {
+  case VF::BasicMaybePointer::String:
+    return {VT::Basic::String};
+  case VF::BasicMaybePointer::ObjectPath:
+    return {VT::Basic::ObjectPath};
+  case VF::BasicMaybePointer::Signature:
+    return {VT::Basic::Signature};
+  case VF::BasicMaybePointer::Any:
+    return {VT::Basic::Any};
+  default:
+    gcc_unreachable ();
     return {VT::Basic::String};
   }
+}
+
+VariantType
+pointer_to_variant_type (VF::Pointer const& pointer)
+{
+  return {pointer_to_basic_type (pointer)};
+}
+
+VariantType
+maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
+{
+  auto v {Util::VisitHelper {
+    [](VT::Array const& array) { return VariantType {array}; },
+    [](VF::AtVariantType const& at) { return at.type; },
+    [](VF::BasicMaybePointer const& bmp) { return basic_maybe_pointer_to_variant_type (bmp); },
+    [](VT::Variant const& variant) { return VariantType {variant}; },
+    [](VT::AnyType const& any) { return VariantType {any}; },
+    [](VT::AnyTuple const& any) { return VariantType {any}; },
+    [](VF::Pointer const& pointer) { return pointer_to_variant_type (pointer); },
+    [](VF::Convenience const &convenience) { return convenience_to_variant_type (convenience); },
+  }};
+
+  return {VT::Maybe {std::visit (v, mp)}};
+}
+
+VariantType
+basic_maybe_bool_to_variant_type (VF::BasicMaybeBool const& bmb)
+{
+  switch (bmb)
+  {
+  case VF::BasicMaybeBool::Bool:
+    return {VT::Basic::Bool};
+  case VF::BasicMaybeBool::Byte:
+    return {VT::Basic::Byte};
+  case VF::BasicMaybeBool::I16:
+    return {VT::Basic::I16};
+  case VF::BasicMaybeBool::U16:
+    return {VT::Basic::U16};
+  case VF::BasicMaybeBool::I32:
+    return {VT::Basic::I32};
+  case VF::BasicMaybeBool::U32:
+    return {VT::Basic::U32};
+  case VF::BasicMaybeBool::I64:
+    return {VT::Basic::I64};
+  case VF::BasicMaybeBool::U64:
+    return {VT::Basic::U64};
+  case VF::BasicMaybeBool::Handle:
+    return {VT::Basic::Handle};
+  case VF::BasicMaybeBool::Double:
+    return {VT::Basic::Double};
+  default:
+    gcc_unreachable ();
+    return {VT::Basic::Bool};
+  }
+}
+
+VT::Basic
+basic_format_to_basic_type (VF::BasicFormat const& basic_format)
+{
+  auto v {Util::VisitHelper {
+    [](VT::Basic const& basic) { return basic; },
+    [](VF::AtBasicType const& at) { return at.basic; },
+    [](VF::Pointer const& pointer) { return pointer_to_basic_type (pointer); },
+  }};
+  return std::visit (v, basic_format);
+}
+
+VariantType
+entry_to_variant_type (VF::Entry const& entry)
+{
+  return {VT::Entry {basic_format_to_basic_type (entry.key), variant_format_to_type (entry.value)}};
+}
+
+VariantType
+tuple_to_variant_type (VF::Tuple const& tuple)
+{
+  std::vector<VariantType> types {};
+  std::transform (tuple.formats.cbegin (),
+                  tuple.formats.cend (),
+                  std::back_inserter (types),
+                  [](VariantFormat const& format)
+                  {
+                    return variant_format_to_type (format);
+                  });
+  return {VT::Tuple {std::move (types)}};
+}
+
+VariantType
+maybe_to_variant_type (VF::Maybe const& maybe);
+
+VariantType
+maybe_bool_to_variant_type (VF::MaybeBool const& mp)
+{
+  auto v {Util::VisitHelper {
+    [](VF::BasicMaybeBool const& bmb) { return basic_maybe_bool_to_variant_type (bmb); },
+    [](VF::Entry const& entry) { return entry_to_variant_type (entry); },
+    [](VF::Tuple const& tuple) { return tuple_to_variant_type (tuple); },
+    [](VF::Maybe const& maybe) { return maybe_to_variant_type (maybe); },
+  }};
+  return {VT::Maybe {std::visit (v, mp)}};
+}
+
+VariantType
+maybe_to_variant_type (VF::Maybe const& maybe)
+{
+  auto v {Util::VisitHelper {
+    [](VF::MaybePointer const& mp) { return maybe_pointer_to_variant_type (mp); },
+    [](VF::MaybeBool const& mb) { return maybe_bool_to_variant_type (mb); },
+  }};
+  return std::visit (v, maybe.kind);
 }
 
 } // anonymous namespace
@@ -642,13 +793,15 @@ pointer_to_variant_type (VF::Pointer pointer)
 VariantType
 variant_format_to_type (VariantFormat const& format)
 {
-  auto v = Util::VisitHelper {
+  auto v {Util::VisitHelper {
     [](VariantType const& variant_type) { return variant_type; },
     [](VF::AtVariantType const& at_variant_type) { return at_variant_type.type; },
     [](VF::Pointer pointer) { return pointer_to_variant_type (pointer); },
-    // TODO: handle Convenience, Maybe, Tuple and Entry
-    [](auto /* arg */) { return VariantType {VT::Basic::I32}; },
-  };
+    [](VF::Convenience const& convenience) { return convenience_to_variant_type (convenience); },
+    [](VF::Maybe const& maybe) { return maybe_to_variant_type (maybe); },
+    [](VF::Tuple const& tuple) { return tuple_to_variant_type (tuple); },
+    [](VF::Entry const& entry) { return entry_to_variant_type (entry); },
+  }};
   return std::visit (v, format);
 }
 

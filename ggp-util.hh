@@ -107,10 +107,16 @@ public:
     ptr.swap (other.ptr);
   }
 
+  operator const T& () const noexcept
+  {
+    gcc_assert (ptr.get() != nullptr);
+    return *ptr;
+  }
+
   operator T& () noexcept
   {
     gcc_assert (ptr.get() != nullptr);
-    return *(ptr.get());
+    return *ptr;
   }
 
 private:

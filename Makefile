@@ -30,7 +30,7 @@ endif
 
 CXXFLAGS := -I`gcc -print-file-name=plugin`/include -fno-rtti -O2 -fPIC -Wall -Wextra -Wpedantic $(COMPILER_CXXFLAGS) -fdiagnostics-color=auto
 
-GGP_CC_HH_SOURCES := ggp-main.cc ggp-util.cc ggp-vc.cc ggp-tc.cc ggp-variant.cc
+GGP_CC_HH_SOURCES := ggp-main.cc ggp-util.cc ggp-vc.cc ggp-tc.cc ggp-variant.cc ggp-type.cc
 
 GGP_SOURCES := $(GGP_CC_HH_SOURCES) ggp-plugin.cc
 

@@ -20,8 +20,8 @@
 #define GGP_VARIANT_HH
 
 #include "ggp-util.hh"
+#include "ggp-cstdint.hh"
 
-#include <cstdint>
 #include <optional>
 #include <string_view>
 #include <variant>
