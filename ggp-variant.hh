@@ -75,7 +75,7 @@ enum class Basic : std::uint8_t
   String, // s
   ObjectPath, // o
   Signature, // g
-  Any // ?
+  Any, // ?
 };
 
 struct AnyType
@@ -120,14 +120,103 @@ parse_variant_type_string (std::string_view const& string);
 namespace VF
 {
 
+enum class BasicMaybePointer : std::uint8_t
+{
+  String, // s
+  ObjectPath, // o
+  Signature, // g
+  Any, // ?
+};
+
+enum class BasicMaybeBool : std::uint8_t
+{
+  Bool, // b
+  Byte, // y
+  I16,  // n
+  U16,  // q
+  I32,  // i
+  U32,  // u
+  I64,  // x
+  U64,  // t
+  Handle, // h
+  Double, // d
+};
+
+namespace VTMod
+{
+
+struct Array;
+struct Maybe;
+struct Tuple;
+struct Entry;
+
+using VariantTypeSubSet = std::variant
+  <
+  VT::Basic,
+  Array,
+  VT::Variant,
+  VT::AnyTuple,
+  VT::AnyType
+  >;
+
+using VariantType = std::variant
+  <
+  VT::Basic,
+  Maybe,
+  Tuple,
+  Array,
+  Entry,
+  VT::Variant,
+  VT::AnyTuple,
+  VT::AnyType
+  >;
+
+struct Array
+{
+  Util::Value<VariantType> element_type;
+};
+
+using MaybePointer = std::variant
+  <
+  Array,
+  VF::BasicMaybePointer,
+  VT::Variant,
+  VT::AnyType,
+  VT::AnyTuple
+  >;
+
+using MaybeBool = std::variant
+  <
+  VF::BasicMaybeBool,
+  Entry,
+  Tuple,
+  Maybe
+  >;
+
+struct Maybe
+{
+  std::variant<MaybePointer, Util::Value<MaybeBool>> kind;
+};
+
+struct Tuple
+{
+  std::vector<VariantType> types;
+};
+
+struct Entry
+{
+  VT::Basic key;
+  Util::Value<VariantType> value;
+};
+
+} // namespace VTMod
+
 struct AtBasicType;
 enum class Pointer : std::uint8_t;
 
 struct AtVariantType;
-enum class BasicMaybePointer : std::uint8_t;
 struct Convenience;
 
-enum class BasicMaybeBool : std::uint8_t;
 struct Tuple;
 struct Entry;
 struct Maybe;
@@ -141,7 +230,7 @@ using BasicFormat = std::variant
 
 using MaybePointer = std::variant
   <
-  VT::Array,
+  VTMod::Array,
   AtVariantType,
   BasicMaybePointer,
   VT::Variant,
@@ -163,7 +252,7 @@ using MaybeBool = std::variant
 
 using VariantFormat = std::variant
   <
-  VariantType,
+  VF::VTMod::VariantTypeSubSet,
   VF::AtVariantType,
   VF::Pointer,
   VF::Convenience,
@@ -184,20 +273,12 @@ enum class Pointer : std::uint8_t
 {
   String,
   ObjectPath,
-  Signature
+  Signature,
 };
 
 struct AtVariantType
 {
-  VariantType type;
-};
-
-enum class BasicMaybePointer : std::uint8_t
-{
-  String,
-  ObjectPath,
-  Signature,
-  Any
+  VTMod::VariantType type;
 };
 
 struct Convenience
@@ -207,31 +288,17 @@ struct Convenience
     StringArray,
     ObjectPathArray,
     ByteString,
-    ByteStringArray
+    ByteStringArray,
   };
 
   enum class Kind : std::uint8_t
   {
     Constant,
-    Duplicated
+    Duplicated,
   };
 
   Type type;
   Kind kind;
-};
-
-enum class BasicMaybeBool : std::uint8_t
-{
-  Bool, // b
-  Byte, // y
-  I16,  // n
-  U16,  // q
-  I32,  // i
-  U32,  // u
-  I64,  // x
-  U64,  // t
-  Handle, // h
-  Double // d
 };
 
 struct Tuple

@@ -24,14 +24,27 @@ namespace Ggp
 namespace
 {
 
-
+std::vector<Type>
+variant_type_to_types (VariantType const& vt)
+{
+  
+}
 
 } // anonymous namespace
 
 std::vector<Type>
-expected_types_for_format (VariantFormat const& /* format */)
+expected_types_for_format (VariantFormat const& format)
 {
-  return {};
+  auto v {Util::VisitHelper {
+    [](VariantType const&) { return foo (); },
+    [](VF::AtVariantType const&) { return foo (); },
+    [](VF::Pointer const&) { return foo (); },
+    [](VF::Convenience const&) { return foo (); },
+    [](VF::Maybe const&) { return foo (); },
+    [](VF::Tuple const&) { return foo (); },
+    [](VF::Entry const&) { return foo (); },
+  }};
+  return std::visit (v, format);;
 }
 
 } // namespace Ggp

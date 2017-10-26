@@ -623,6 +623,110 @@ parse_variant_format_string (std::string_view const& string)
 namespace
 {
 
+VariantType
+basic_maybe_pointer_to_variant_type (VF::BasicMaybePointer const& bmp)
+{
+  switch (bmp)
+  {
+  case VF::BasicMaybePointer::String:
+    return {VT::Basic::String};
+  case VF::BasicMaybePointer::ObjectPath:
+    return {VT::Basic::ObjectPath};
+  case VF::BasicMaybePointer::Signature:
+    return {VT::Basic::Signature};
+  case VF::BasicMaybePointer::Any:
+    return {VT::Basic::Any};
+  default:
+    gcc_unreachable ();
+    return {VT::Basic::String};
+  }
+}
+
+VariantType
+basic_maybe_bool_to_variant_type (VF::BasicMaybeBool const& bmb)
+{
+  switch (bmb)
+  {
+  case VF::BasicMaybeBool::Bool:
+    return {VT::Basic::Bool};
+  case VF::BasicMaybeBool::Byte:
+    return {VT::Basic::Byte};
+  case VF::BasicMaybeBool::I16:
+    return {VT::Basic::I16};
+  case VF::BasicMaybeBool::U16:
+    return {VT::Basic::U16};
+  case VF::BasicMaybeBool::I32:
+    return {VT::Basic::I32};
+  case VF::BasicMaybeBool::U32:
+    return {VT::Basic::U32};
+  case VF::BasicMaybeBool::I64:
+    return {VT::Basic::I64};
+  case VF::BasicMaybeBool::U64:
+    return {VT::Basic::U64};
+  case VF::BasicMaybeBool::Handle:
+    return {VT::Basic::Handle};
+  case VF::BasicMaybeBool::Double:
+    return {VT::Basic::Double};
+  default:
+    gcc_unreachable ();
+    return {VT::Basic::Bool};
+  }
+}
+
+VariantType
+variant_type_mod_to_variant_type (VF::VTMod::VariantType const& vtm);
+
+VariantType
+array_mod_to_variant_type (VF::VTMod::Array const& array)
+{
+  return {VT::Basic::String};
+}
+
+VariantType
+variant_type_subset_mod_to_variant_type (VF::VTMod::VariantTypeSubSet const& vtms)
+{
+  return {VT::Basic::String};
+}
+
+VariantType
+maybe_pointer_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
+{
+  return {VT::Basic::String};
+}
+
+VariantType
+maybe_mod_to_variant_type (VF::VTMod::Maybe const& maybe);
+
+VariantType
+maybe_bool_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
+{
+  return {VT::Basic::String};
+}
+
+VariantType
+maybe_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
+{
+  return {VT::Basic::String};
+}
+
+VariantType
+tuple_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
+{
+  return {VT::Basic::String};
+}
+
+VariantType
+entry_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
+{
+  return {VT::Basic::String};
+}
+
+VariantType
+variant_type_mod_to_variant_type (VF::VTMod::VariantType const& vtm)
+{
+  return {VT::Basic::String};
+}
+
 VT::Basic
 pointer_to_basic_type (VF::Pointer pointer)
 {
@@ -660,25 +764,6 @@ convenience_to_variant_type (VF::Convenience const& convenience)
 }
 
 VariantType
-basic_maybe_pointer_to_variant_type (VF::BasicMaybePointer const& bmp)
-{
-  switch (bmp)
-  {
-  case VF::BasicMaybePointer::String:
-    return {VT::Basic::String};
-  case VF::BasicMaybePointer::ObjectPath:
-    return {VT::Basic::ObjectPath};
-  case VF::BasicMaybePointer::Signature:
-    return {VT::Basic::Signature};
-  case VF::BasicMaybePointer::Any:
-    return {VT::Basic::Any};
-  default:
-    gcc_unreachable ();
-    return {VT::Basic::String};
-  }
-}
-
-VariantType
 pointer_to_variant_type (VF::Pointer const& pointer)
 {
   return {pointer_to_basic_type (pointer)};
@@ -699,37 +784,6 @@ maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
   }};
 
   return {VT::Maybe {std::visit (v, mp)}};
-}
-
-VariantType
-basic_maybe_bool_to_variant_type (VF::BasicMaybeBool const& bmb)
-{
-  switch (bmb)
-  {
-  case VF::BasicMaybeBool::Bool:
-    return {VT::Basic::Bool};
-  case VF::BasicMaybeBool::Byte:
-    return {VT::Basic::Byte};
-  case VF::BasicMaybeBool::I16:
-    return {VT::Basic::I16};
-  case VF::BasicMaybeBool::U16:
-    return {VT::Basic::U16};
-  case VF::BasicMaybeBool::I32:
-    return {VT::Basic::I32};
-  case VF::BasicMaybeBool::U32:
-    return {VT::Basic::U32};
-  case VF::BasicMaybeBool::I64:
-    return {VT::Basic::I64};
-  case VF::BasicMaybeBool::U64:
-    return {VT::Basic::U64};
-  case VF::BasicMaybeBool::Handle:
-    return {VT::Basic::Handle};
-  case VF::BasicMaybeBool::Double:
-    return {VT::Basic::Double};
-  default:
-    gcc_unreachable ();
-    return {VT::Basic::Bool};
-  }
 }
 
 VT::Basic
@@ -794,7 +848,7 @@ VariantType
 variant_format_to_type (VariantFormat const& format)
 {
   auto v {Util::VisitHelper {
-    [](VariantType const& variant_type) { return variant_type; },
+    [](VF::VTMod::VariantType const& vtm) { return variant_type_mod_to_variant_type (vtm); },
     [](VF::AtVariantType const& at_variant_type) { return at_variant_type.type; },
     [](VF::Pointer pointer) { return pointer_to_variant_type (pointer); },
     [](VF::Convenience const& convenience) { return convenience_to_variant_type (convenience); },
