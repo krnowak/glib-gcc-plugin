@@ -19,10 +19,9 @@
 #ifndef GGP_UTIL_HH
 #define GGP_UTIL_HH
 
-#include <memory>
-#include <string>
+#include "ggp-gcc.hh"
 
-#include "gcc-plugin.h"
+#include <memory>
 
 #define GGP_UTIL_STR_HELP_(x) #x
 #define GGP_UTIL_STR(x) GGP_UTIL_STR_HELP_(x)

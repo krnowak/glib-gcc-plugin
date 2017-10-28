@@ -19,7 +19,7 @@
 #ifndef GGP_MAIN_HH
 #define GGP_MAIN_HH
 
-#include "gcc-plugin.h"
+#include "ggp-gcc.hh"
 
 namespace Ggp
 {

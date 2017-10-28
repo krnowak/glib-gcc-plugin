@@ -397,6 +397,11 @@ parse_entry_format (std::string_view const& string)
   return {{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->rest.substr (1)}};
 }
 
+using ParseTypeModResult = ParseResult<VF::VTMod::VariantType>;
+
+std::optional<ParseTypeModResult>
+parse_type_mod (std::string_view const& string);
+
 using ParseMaybeFormatResult = ParseResult<VF::Maybe>;
 
 std::optional<ParseMaybeFormatResult>
@@ -412,16 +417,16 @@ parse_maybe_format (std::string_view const& string)
     // pointer maybes
   case 'a':
     {
-      auto maybe_result {parse_single_type (rest)};
+      auto maybe_result {parse_type_mod (rest)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{VF::MaybePointer {VT::Array {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
+      return {{{VF::MaybePointer {VF::VTMod::Array {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
     }
   case '@':
     {
-      auto maybe_result {parse_single_type (rest)};
+      auto maybe_result {parse_type_mod (rest)};
       if (!maybe_result)
       {
         return {};
@@ -524,6 +529,267 @@ parse_maybe_format (std::string_view const& string)
   }
 }
 
+using ParseEntryTypeModResult = ParseResult<VF::VTMod::Entry>;
+
+std::optional<ParseEntryTypeModResult>
+parse_entry_type_mod (std::string_view const& string)
+{
+  auto maybe_first_result {parse_basic_type (string)};
+  if (!maybe_first_result)
+  {
+    return {};
+  }
+  auto maybe_second_result {parse_type_mod (maybe_first_result->rest)};
+  if (!maybe_second_result)
+  {
+    return {};
+  }
+  if (maybe_second_result->rest.empty ())
+  {
+    return {};
+  }
+  if (maybe_second_result->rest.front () != '}')
+  {
+    return {};
+  }
+  return {{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->rest.substr (1)}};
+}
+
+using ParseTupleTypeModResult = ParseResult<VF::VTMod::Tuple>;
+
+std::optional<ParseTupleTypeModResult>
+parse_tuple_type_mod (std::string_view string)
+{
+  std::vector<VF::VTMod::VariantType> types {};
+  for (;;)
+  {
+    if (string.empty ())
+    {
+      return {};
+    }
+    if (string.front () == ')')
+    {
+      return {{{std::move (types)}, string.substr (1)}};
+    }
+    auto maybe_result {parse_type_mod (string)};
+    if (!maybe_result)
+    {
+      return {};
+    }
+    string = std::move (maybe_result->rest);
+    types.push_back (std::move (maybe_result->parsed));
+  }
+}
+
+using ParseMaybeTypeModResult = ParseResult<VF::VTMod::Maybe>;
+
+std::optional<ParseMaybeTypeModResult>
+parse_maybe_type_mod (std::string_view const& string)
+{
+  if (string.empty ())
+  {
+    return {};
+  }
+  auto rest {string.substr (1)};
+  switch (string.front ())
+  {
+    // pointer maybes
+  case 'a':
+    {
+      auto maybe_result {parse_type_mod (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::VTMod::MaybePointer {VF::VTMod::Array {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
+    }
+  case 'v':
+    return {{{VF::VTMod::MaybePointer {VT::Variant {}}}, std::move (rest)}};
+  case '*':
+    return {{{VF::VTMod::MaybePointer {VT::AnyType {}}}, std::move (rest)}};
+  case 'r':
+    return {{{VF::VTMod::MaybePointer {VT::AnyTuple {}}}, std::move (rest)}};
+    // bool maybes
+  case '{':
+    {
+      auto maybe_result {parse_entry_type_mod (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::VTMod::MaybeBool {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+    }
+  case '(':
+    {
+      auto maybe_result {parse_tuple_type_mod (std::move (rest))};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::VTMod::MaybeBool {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+    }
+  case 'm':
+    {
+      auto maybe_result {parse_maybe_type_mod (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{{VF::VTMod::MaybeBool {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+    }
+    // basic maybes, need to decide whether a pointer or bool
+  default:
+    {
+      auto maybe_result {parse_basic_type (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      switch (maybe_result->parsed)
+      {
+      case VT::Basic::String:
+        return {{{VF::VTMod::MaybePointer {VF::BasicMaybePointer::String}}, std::move (maybe_result->rest)}};
+      case VT::Basic::ObjectPath:
+        return {{{VF::VTMod::MaybePointer {VF::BasicMaybePointer::ObjectPath}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Signature:
+        return {{{VF::VTMod::MaybePointer {VF::BasicMaybePointer::Signature}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Any:
+        return {{{VF::VTMod::MaybePointer {VF::BasicMaybePointer::Any}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Bool:
+        return {{{VF::VTMod::MaybeBool {VF::BasicMaybeBool::Bool}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Byte:
+        return {{{VF::VTMod::MaybeBool {VF::BasicMaybeBool::Byte}}, std::move (maybe_result->rest)}};
+      case VT::Basic::I16:
+        return {{{VF::VTMod::MaybeBool {VF::BasicMaybeBool::I16}}, std::move (maybe_result->rest)}};
+      case VT::Basic::U16:
+        return {{{VF::VTMod::MaybeBool {VF::BasicMaybeBool::U16}}, std::move (maybe_result->rest)}};
+      case VT::Basic::I32:
+        return {{{VF::VTMod::MaybeBool {VF::BasicMaybeBool::I32}}, std::move (maybe_result->rest)}};
+      case VT::Basic::U32:
+        return {{{VF::VTMod::MaybeBool {VF::BasicMaybeBool::U32}}, std::move (maybe_result->rest)}};
+      case VT::Basic::I64:
+        return {{{VF::VTMod::MaybeBool {VF::BasicMaybeBool::I64}}, std::move (maybe_result->rest)}};
+      case VT::Basic::U64:
+        return {{{VF::VTMod::MaybeBool {VF::BasicMaybeBool::U64}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Handle:
+        return {{{VF::VTMod::MaybeBool {VF::BasicMaybeBool::Handle}}, std::move (maybe_result->rest)}};
+      case VT::Basic::Double:
+        return {{{VF::VTMod::MaybeBool {VF::BasicMaybeBool::Double}}, std::move (maybe_result->rest)}};
+      }
+      return {};
+    }
+  }
+}
+
+std::optional<ParseTypeModResult>
+parse_type_mod (std::string_view const& string)
+{
+  if (string.empty ())
+  {
+    return {};
+  }
+
+  auto rest {string.substr (1)};
+  switch (string.front ())
+  {
+  case '{':
+    {
+      auto maybe_result {parse_entry_type_mod (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  case '(':
+    {
+      auto maybe_result {parse_tuple_type_mod (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  case 'm':
+    {
+      auto maybe_result {parse_maybe_type_mod (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  case 'a':
+    {
+      auto maybe_result {parse_type_mod (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{VF::VTMod::Array {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
+    }
+  case '*':
+    return {{VT::AnyType {}, std::move (rest)}};
+  case 'r':
+    return {{VT::AnyTuple {}, std::move (rest)}};
+  case 'v':
+    return {{VT::Variant {}, std::move (rest)}};
+  default:
+    {
+      auto maybe_result {parse_basic_type (string)};
+
+      if (!maybe_result)
+      {
+        return {};
+      }
+
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  }
+}
+
+using ParseTypeSubSetModResult = ParseResult<VF::VTMod::VariantTypeSubSet>;
+
+std::optional<ParseTypeSubSetModResult>
+parse_type_sub_set_mod (std::string_view const& string)
+{
+  if (string.empty ())
+  {
+    return {};
+  }
+
+  auto rest {string.substr (1)};
+  switch (string.front ())
+  {
+  case 'a':
+    {
+      auto maybe_result {parse_type_mod (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{VF::VTMod::Array {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
+    }
+  case '*':
+    return {{VT::AnyType {}, std::move (rest)}};
+  case 'r':
+    return {{VT::AnyTuple {}, std::move (rest)}};
+  case 'v':
+    return {{VT::Variant {}, std::move (rest)}};
+  default:
+    {
+      auto maybe_result {parse_basic_type (string)};
+
+      if (!maybe_result)
+      {
+        return {};
+      }
+
+      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
+    }
+  }
+}
+
 std::optional<ParseFormatResult>
 parse_single_format (std::string_view const& string)
 {
@@ -537,7 +803,7 @@ parse_single_format (std::string_view const& string)
   {
   case '@':
     {
-      auto maybe_result {parse_single_type (rest)};
+      auto maybe_result {parse_type_mod (rest)};
       if (!maybe_result)
       {
         return {};
@@ -591,7 +857,7 @@ parse_single_format (std::string_view const& string)
     }
   default:
     {
-      auto maybe_result {parse_single_type (rest)};
+      auto maybe_result {parse_type_sub_set_mod (rest)};
       if (!maybe_result)
       {
         return {};
@@ -677,52 +943,64 @@ VariantType
 variant_type_mod_to_variant_type (VF::VTMod::VariantType const& vtm);
 
 VariantType
-array_mod_to_variant_type (VF::VTMod::Array const& array)
+array_mod_to_variant_type (VF::VTMod::Array const& /* array */)
 {
   return {VT::Basic::String};
 }
 
 VariantType
-variant_type_subset_mod_to_variant_type (VF::VTMod::VariantTypeSubSet const& vtms)
+variant_type_sub_set_mod_to_variant_type (VF::VTMod::VariantTypeSubSet const& /* vtss */)
 {
   return {VT::Basic::String};
 }
 
+/*
 VariantType
 maybe_pointer_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
 {
   return {VT::Basic::String};
 }
+*/
 
+/*
 VariantType
 maybe_mod_to_variant_type (VF::VTMod::Maybe const& maybe);
+*/
 
+/*
 VariantType
 maybe_bool_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
 {
   return {VT::Basic::String};
 }
+*/
 
+/*
 VariantType
 maybe_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
 {
   return {VT::Basic::String};
 }
+*/
 
+/*
 VariantType
-tuple_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
+tuple_mod_to_variant_type (VF::VTMod::Maybe const& tuple)
 {
   return {VT::Basic::String};
 }
+*/
 
+/*
 VariantType
-entry_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
+entry_mod_to_variant_type (VF::VTMod::Maybe const& entry)
 {
   return {VT::Basic::String};
 }
+*/
 
 VariantType
-variant_type_mod_to_variant_type (VF::VTMod::VariantType const& vtm)
+variant_type_mod_to_variant_type (VF::VTMod::VariantType const& /* vtm */)
 {
   return {VT::Basic::String};
 }
@@ -773,8 +1051,8 @@ VariantType
 maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
 {
   auto v {Util::VisitHelper {
-    [](VT::Array const& array) { return VariantType {array}; },
-    [](VF::AtVariantType const& at) { return at.type; },
+    [](VF::VTMod::Array const& array) { return array_mod_to_variant_type (array); },
+    [](VF::AtVariantType const& avt) { return variant_type_mod_to_variant_type (avt.type); },
     [](VF::BasicMaybePointer const& bmp) { return basic_maybe_pointer_to_variant_type (bmp); },
     [](VT::Variant const& variant) { return VariantType {variant}; },
     [](VT::AnyType const& any) { return VariantType {any}; },
@@ -848,8 +1126,8 @@ VariantType
 variant_format_to_type (VariantFormat const& format)
 {
   auto v {Util::VisitHelper {
-    [](VF::VTMod::VariantType const& vtm) { return variant_type_mod_to_variant_type (vtm); },
-    [](VF::AtVariantType const& at_variant_type) { return at_variant_type.type; },
+    [](VF::VTMod::VariantTypeSubSet const& vtss) { return variant_type_sub_set_mod_to_variant_type (vtss); },
+    [](VF::AtVariantType const& avt) { return variant_type_mod_to_variant_type (avt.type); },
     [](VF::Pointer pointer) { return pointer_to_variant_type (pointer); },
     [](VF::Convenience const& convenience) { return convenience_to_variant_type (convenience); },
     [](VF::Maybe const& maybe) { return maybe_to_variant_type (maybe); },

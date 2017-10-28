@@ -18,10 +18,6 @@
 
 #include "ggp-util.hh"
 
-#include "diagnostic.h"
-
-#include "errors.h"
-
 namespace Ggp
 {
 
@@ -39,7 +35,9 @@ get_event_name (int event)
 #define DEFEVENT(name) case name: return #name;
 #include "plugin.def"
 #undef DEFEVENT
-  default: return "UNKNOWN_OR_DYNAMIC_EVENT";
+  default:
+    gcc_unreachable ();
+    return "UNKNOWN_OR_DYNAMIC_EVENT";
   }
 }
 
@@ -52,7 +50,9 @@ get_code_name (int code)
   case 1: return "PLUGEVT_NO_EVENTS";
   case 2: return "PLUGEVT_NO_SUCH_EVENT";
   case 3: return "PLUGEVT_NO_CALLBACK";
-  default: return "UNKNOWN_CODE";
+  default:
+    gcc_unreachable ();
+    return "UNKNOWN_CODE";
   }
 }
 

@@ -18,11 +18,6 @@
 
 #include "ggp-vc.hh"
 
-#include "diagnostic.h"
-#include "tree.h"
-#include "dumpfile.h"
-#include "tree-iterator.h"
-
 #include <optional>
 #include <queue>
 

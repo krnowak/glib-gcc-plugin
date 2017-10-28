@@ -16,12 +16,13 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "ggp-gcc.hh"
+
 #include "ggp-main.hh"
 #include "ggp-util.hh"
 
 #include <stdio.h>
 
-#include "gcc-plugin.h"
 #include "plugin-version.h"
 
 int plugin_is_GPL_compatible;

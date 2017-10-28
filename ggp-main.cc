@@ -21,8 +21,6 @@
 #include "ggp-tc.hh"
 #include "ggp-vc.hh"
 
-#include "diagnostic.h"
-
 namespace Ggp
 {
 

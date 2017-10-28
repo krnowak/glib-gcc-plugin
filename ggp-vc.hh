@@ -19,9 +19,9 @@
 #ifndef GGP_VC_HH
 #define GGP_VC_HH
 
-#include "ggp-util.hh"
+#include "ggp-gcc.hh"
 
-#include "gcc-plugin.h"
+#include "ggp-util.hh"
 
 namespace Ggp
 {

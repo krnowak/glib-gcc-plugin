@@ -20,12 +20,10 @@
 #define GGP_VARIANT_HH
 
 #include "ggp-util.hh"
-#include "ggp-cstdint.hh"
 
 #include <optional>
 #include <string_view>
 #include <variant>
-#include <vector>
 
 namespace Ggp
 {

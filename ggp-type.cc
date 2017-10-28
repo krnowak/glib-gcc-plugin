@@ -25,10 +25,18 @@ namespace
 {
 
 std::vector<Type>
-variant_type_to_types (VariantType const& vt)
+foo ()
 {
-  
+  return {};
 }
+
+/*
+std::vector<Type>
+variant_type_sub_set_mod_to_types (VF::VTMod::VariantTypeSubSet const& vtss)
+{
+  return {};
+}
+*/
 
 } // anonymous namespace
 
@@ -36,7 +44,7 @@ std::vector<Type>
 expected_types_for_format (VariantFormat const& format)
 {
   auto v {Util::VisitHelper {
-    [](VariantType const&) { return foo (); },
+    [](VF::VTMod::VariantTypeSubSet const&) { return foo (); },
     [](VF::AtVariantType const&) { return foo (); },
     [](VF::Pointer const&) { return foo (); },
     [](VF::Convenience const&) { return foo (); },

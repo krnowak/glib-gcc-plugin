@@ -18,8 +18,6 @@
 
 #include "ggp-tc.hh"
 
-#include "diagnostic.h"
-
 #if 0
 static tree
 g_tuple_handler (tree *node,

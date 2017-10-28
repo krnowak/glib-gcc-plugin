@@ -19,12 +19,12 @@
 #ifndef GGP_TYPE_HH
 #define GGP_TYPE_HH
 
+#include "ggp-gcc.hh"
+
 #include "ggp-util.hh"
 #include "ggp-variant.hh"
 
-#include <string>
 #include <variant>
-#include <vector>
 
 namespace Ggp
 {
