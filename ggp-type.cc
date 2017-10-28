@@ -52,7 +52,7 @@ expected_types_for_format (VariantFormat const& format)
     [](VF::Tuple const&) { return foo (); },
     [](VF::Entry const&) { return foo (); },
   }};
-  return std::visit (v, format);;
+  return std::visit (v, format);
 }
 
 } // namespace Ggp

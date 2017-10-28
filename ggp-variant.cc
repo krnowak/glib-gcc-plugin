@@ -943,15 +943,22 @@ VariantType
 variant_type_mod_to_variant_type (VF::VTMod::VariantType const& vtm);
 
 VariantType
-array_mod_to_variant_type (VF::VTMod::Array const& /* array */)
+array_mod_to_variant_type (VF::VTMod::Array const& array)
 {
-  return {VT::Basic::String};
+  return {VT::Array {variant_type_mod_to_variant_type (array.element_type)}};
 }
 
 VariantType
-variant_type_sub_set_mod_to_variant_type (VF::VTMod::VariantTypeSubSet const& /* vtss */)
+variant_type_sub_set_mod_to_variant_type (VF::VTMod::VariantTypeSubSet const& vtss)
 {
-  return {VT::Basic::String};
+  auto v {Util::VisitHelper {
+    [](VT::Basic const& basic) { return VariantType {basic}; },
+    [](VF::VTMod::Array const& array) { return array_mod_to_variant_type (array); },
+    [](VT::Variant const& variant) { return VariantType {variant}; },
+    [](VT::AnyTuple const& tuple) { return VariantType {tuple}; },
+    [](VT::AnyType const& type) { return VariantType {type}; },
+  }};
+  return std::visit (v, vtss);
 }
 
 /*
