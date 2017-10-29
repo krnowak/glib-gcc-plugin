@@ -1,3 +1,9 @@
+typedef int gint;
+typedef gint gboolean;
+typedef unsigned char guchar;
+
+#define NULL ((void *) 0)
+
 static void
 variant_set (int a, const char *format, ...)  __attribute__ ((glib_variant("set", 2, 3)));
 
@@ -19,6 +25,7 @@ static void
 bar (void)
 {
   double d;
-  variant_set (33, "i", 42);
-  extern_variant_get (1, "d", &d);
+  guchar c = 13;
+  variant_set (33, "(iy)", 42, c);
+  extern_variant_get (1, "(dms)", &d, NULL);
 }

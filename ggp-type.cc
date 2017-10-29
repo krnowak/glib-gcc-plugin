@@ -24,10 +24,26 @@ namespace Ggp
 namespace
 {
 
-std::vector<Types>
-foo ()
+Types
+gvariant_types ()
 {
-  return {};
+  using namespace std::string_literals;
+
+  return {{Pointer {"GVariant"s}}, {Pointer {Pointer {"GVariant"s}}}};
+}
+
+std::vector<Types>
+gvariant_types_v ()
+{
+  return {gvariant_types ()};
+}
+
+Type
+const_str ()
+{
+  using namespace std::string_literals;
+
+  return {Pointer {Const {"gchar"s}}};
 }
 
 std::vector<Types>
@@ -58,13 +74,13 @@ basic_type_to_types (VT::Basic basic)
   case VT::Basic::Double:
     return {{{"gdouble"s}, {Pointer {"gdouble"s}}}};
   case VT::Basic::String:
-    return {{{Pointer {Const {"gchar"s}}}, {Pointer {Pointer {"gchar"s}}}}};
+    return {{const_str (), {Pointer {Pointer {"gchar"s}}}}};
   case VT::Basic::ObjectPath:
-    return {{{Pointer {Const {"gchar"s}}}, {Pointer {Pointer {"gchar"s}}}}};
+    return {{const_str (), {Pointer {Pointer {"gchar"s}}}}};
   case VT::Basic::Signature:
-    return {{{Pointer {Const {"gchar"s}}}, {Pointer {Pointer {"gchar"s}}}}};
+    return {{const_str (), {Pointer {Pointer {"gchar"s}}}}};
   case VT::Basic::Any:
-    return {{{Pointer {"GVariant"s}}, {Pointer {Pointer {"GVariant"s}}}}};
+    return gvariant_types_v ();
   default:
     gcc_unreachable ();
     return {};
@@ -72,16 +88,56 @@ basic_type_to_types (VT::Basic basic)
 }
 
 std::vector<Types>
+array_mod_to_types ()
+{
+  using namespace std::string_literals;
+
+  return {{{Pointer {"GVariantBuilder"s}}, {Pointer {Pointer {"GVariantIter"s}}}}};
+}
+
+std::vector<Types>
 variant_type_sub_set_mod_to_types (VF::VTMod::VariantTypeSubSet const& vtss)
 {
   auto v {Util::VisitHelper {
     [](VT::Basic const& basic) { return basic_type_to_types (basic); },
-    [](VF::VTMod::Array const&) { return foo (); },
-    [](VT::Variant const&) { return foo (); },
-    [](VT::AnyTuple const&) { return foo (); },
-    [](VT::AnyType const&) { return foo (); },
+    [](VF::VTMod::Array const&) { return array_mod_to_types (); },
+    [](VT::Variant const&) { return gvariant_types_v (); },
+    [](VT::AnyTuple const&) { return gvariant_types_v (); },
+    [](VT::AnyType const&) { return gvariant_types_v (); },
   }};
   return std::visit (v, vtss);
+}
+
+std::vector<Types>
+pointer_to_types ()
+{
+  using namespace std::string_literals;
+
+  return {{const_str (), {Pointer {Pointer {Const {"gchar"s}}}}}};
+}
+
+std::vector<Types>
+convenience_to_types (VF::Convenience const& /* convenience */)
+{
+  return {};
+}
+
+std::vector<Types>
+maybe_to_types (VF::Maybe const& /* maybe */)
+{
+  return {};
+}
+
+std::vector<Types>
+tuple_to_types (VF::Tuple const& /* tuple */)
+{
+  return {};
+}
+
+std::vector<Types>
+entry_to_types (VF::Entry const& /* entry */)
+{
+  return {};
 }
 
 } // anonymous namespace
@@ -91,12 +147,12 @@ expected_types_for_format (VariantFormat const& format)
 {
   auto v {Util::VisitHelper {
     [](VF::VTMod::VariantTypeSubSet const& vtss) { return variant_type_sub_set_mod_to_types (vtss); },
-    [](VF::AtVariantType const&) { return foo (); },
-    [](VF::Pointer const&) { return foo (); },
-    [](VF::Convenience const&) { return foo (); },
-    [](VF::Maybe const&) { return foo (); },
-    [](VF::Tuple const&) { return foo (); },
-    [](VF::Entry const&) { return foo (); },
+    [](VF::AtVariantType const&) { return gvariant_types_v (); },
+    [](VF::Pointer const&) { return pointer_to_types (); },
+    [](VF::Convenience const& convenience) { return convenience_to_types (convenience); },
+    [](VF::Maybe const& maybe) { return maybe_to_types (maybe); },
+    [](VF::Tuple const& tuple) { return tuple_to_types (tuple); },
+    [](VF::Entry const& entry) { return entry_to_types (entry); },
   }};
   return std::visit (v, format);
 }

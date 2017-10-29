@@ -49,6 +49,8 @@ struct Pointer
   std::variant<Util::Value<Pointer>, Const, TypeName> type;
 };
 
+// TODO: Add NullablePointer for maybes and some arrays
+
 using Type = std::variant<Const, Pointer, TypeName>;
 
 struct Types
