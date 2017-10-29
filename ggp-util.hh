@@ -122,6 +122,13 @@ private:
   std::unique_ptr<T> ptr;
 };
 
+template <typename T, typename... Args>
+Value<T>
+value (Args&&... args)
+{
+  return {std::forward<Args> (args)...};
+}
+
 template<class... TypeP> struct VisitHelper : TypeP... { using TypeP::operator()...; };
 template<class... TypeP> VisitHelper(TypeP...) -> VisitHelper<TypeP...>;
 

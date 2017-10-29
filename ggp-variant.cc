@@ -961,55 +961,78 @@ variant_type_sub_set_mod_to_variant_type (VF::VTMod::VariantTypeSubSet const& vt
   return std::visit (v, vtss);
 }
 
-/*
 VariantType
-maybe_pointer_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
+tuple_mod_to_variant_type (VF::VTMod::Tuple const& tuple)
 {
-  return {VT::Basic::String};
+  std::vector<VariantType> types {};
+  std::transform (tuple.types.cbegin (),
+                  tuple.types.cend (),
+                  std::back_inserter (types),
+                  [](VF::VTMod::VariantType const& type)
+                  {
+                    return variant_type_mod_to_variant_type (type);
+                  });
+  return {VT::Tuple {std::move (types)}};
 }
-*/
 
-/*
+VariantType
+entry_mod_to_variant_type (VF::VTMod::Entry const& entry)
+{
+  return {VT::Entry {entry.key, variant_type_mod_to_variant_type (entry.value)}};
+}
+
+VariantType
+maybe_pointer_mod_to_variant_type (VF::VTMod::MaybePointer const& mp)
+{
+  auto v {Util::VisitHelper {
+    [](VF::VTMod::Array const& array) { return array_mod_to_variant_type (array); },
+    [](VF::BasicMaybePointer const& bmp) { return basic_maybe_pointer_to_variant_type (bmp); },
+    [](VT::Variant const& variant) { return VariantType (variant); },
+    [](VT::AnyType const& type) { return VariantType (type); },
+    [](VT::AnyTuple const& tuple) { return VariantType (tuple); },
+  }};
+  return std::visit (v, mp);
+}
+
 VariantType
 maybe_mod_to_variant_type (VF::VTMod::Maybe const& maybe);
-*/
 
-/*
 VariantType
-maybe_bool_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
+maybe_bool_mod_to_variant_type (VF::VTMod::MaybeBool const& mb)
 {
-  return {VT::Basic::String};
+  auto v {Util::VisitHelper {
+    [](VF::BasicMaybeBool const& bmb) { return basic_maybe_bool_to_variant_type (bmb); },
+    [](VF::VTMod::Entry const& entry) { return entry_mod_to_variant_type (entry); },
+    [](VF::VTMod::Tuple const& tuple) { return tuple_mod_to_variant_type (tuple); },
+    [](VF::VTMod::Maybe const& maybe) { return maybe_mod_to_variant_type (maybe); },
+  }};
+  return std::visit (v, mb);
 }
-*/
 
-/*
 VariantType
 maybe_mod_to_variant_type (VF::VTMod::Maybe const& maybe)
 {
-  return {VT::Basic::String};
+  auto v {Util::VisitHelper {
+    [](VF::VTMod::MaybePointer const& mp) { return maybe_pointer_mod_to_variant_type (mp); },
+    [](VF::VTMod::MaybeBool const& mb) { return maybe_bool_mod_to_variant_type (mb); },
+  }};
+  return {VT::Maybe {std::visit (v, maybe.kind)}};
 }
-*/
-
-/*
-VariantType
-tuple_mod_to_variant_type (VF::VTMod::Maybe const& tuple)
-{
-  return {VT::Basic::String};
-}
-*/
-
-/*
-VariantType
-entry_mod_to_variant_type (VF::VTMod::Maybe const& entry)
-{
-  return {VT::Basic::String};
-}
-*/
 
 VariantType
-variant_type_mod_to_variant_type (VF::VTMod::VariantType const& /* vtm */)
+variant_type_mod_to_variant_type (VF::VTMod::VariantType const& vtm)
 {
-  return {VT::Basic::String};
+  auto v {Util::VisitHelper {
+    [](VT::Basic const& basic) { return VariantType {basic}; },
+    [](VF::VTMod::Maybe const& maybe) { return maybe_mod_to_variant_type (maybe); },
+    [](VF::VTMod::Tuple const& tuple) { return tuple_mod_to_variant_type (tuple); },
+    [](VF::VTMod::Array const& array) { return array_mod_to_variant_type (array); },
+    [](VF::VTMod::Entry const& entry) { return entry_mod_to_variant_type (entry); },
+    [](VT::Variant const& variant) { return VariantType {variant}; },
+    [](VT::AnyTuple const& tuple) { return VariantType {tuple}; },
+    [](VT::AnyType const& type) { return VariantType {type}; },
+  }};
+  return std::visit (v, vtm);
 }
 
 VT::Basic

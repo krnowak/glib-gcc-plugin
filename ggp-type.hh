@@ -29,24 +29,35 @@
 namespace Ggp
 {
 
-struct Const;
 struct Pointer;
 
+// TODO: This probably won't be enough. We will another variant like:
+//
+// std::variant<Integral, VariantTyped>
+//
+// Integral could store a size in bits, signedness and probably a list
+// of names from most expected to least expected.
+//
+// VariantTyped probably can hold some extra data about GVariant,
+// GVariantBuilder or GVariantIter
 using TypeName = std::string;
 
-struct Const
-{
-  std::variant<Util::Value<Pointer>, TypeName> type;
-};
+using Const = std::variant<Util::Value<Pointer>, TypeName>;
 
 struct Pointer
 {
-  std::variant<Util::Value<Const>, TypeName> type;
+  std::variant<Util::Value<Pointer>, Const, TypeName> type;
 };
 
 using Type = std::variant<Const, Pointer, TypeName>;
 
-std::vector<Type>
+struct Types
+{
+  Type for_new;
+  Type for_get;
+};
+
+std::vector<Types>
 expected_types_for_format (VariantFormat const& format);
 
 } // namespace Ggp
