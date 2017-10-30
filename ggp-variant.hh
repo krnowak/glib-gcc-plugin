@@ -28,13 +28,59 @@
 namespace Ggp
 {
 
+namespace Leaf
+{
+
+struct Variant {}; // v
+struct AnyTuple {}; // r
+struct AnyType {}; // *
+
+struct Bool {}; // b
+struct Byte {}; // y
+struct I16 {}; // n
+struct U16 {}; // q
+struct I32 {}; // i
+struct U32 {}; // u
+struct I64 {}; // x
+struct U64 {}; // t
+struct Handle {}; // h
+struct Double {}; // d
+struct String {}; // s
+struct ObjectPath {}; // o
+struct Signature {}; // g
+struct AnyBasic {}; // ?
+
+using Basic = std::variant
+  <
+  Leaf::Bool,
+  Leaf::Byte,
+  Leaf::I16,
+  Leaf::U16,
+  Leaf::I32,
+  Leaf::U32,
+  Leaf::I64,
+  Leaf::U64,
+  Leaf::Handle,
+  Leaf::Double,
+  Leaf::String,
+  Leaf::ObjectPath,
+  Leaf::Signature,
+  Leaf::AnyBasic
+  >;
+
+} // namespace Leaf
+
 // variant type
 namespace VT
 {
 
+// TODO: Drop it.
 enum class Basic : std::uint8_t;
+// TODO: Drop it.
 struct Variant; // v
+// TODO: Drop it.
 struct AnyTuple; // r
+// TODO: Drop it.
 struct AnyType; // *
 struct Array; // a
 struct Maybe; // m
@@ -45,19 +91,31 @@ struct Entry; // {}
 
 using VariantType = std::variant
   <
+  /*
+  Leaf::Basic,
+
+  Leaf::Variant,
+  Leaf::AnyTuple,
+  Leaf::AnyType,
+   */
+  // TODO: Drop it.
   VT::Basic,
   VT::Maybe,
   VT::Tuple,
   VT::Array,
   VT::Entry,
+  // TODO: Drop it.
   VT::Variant,
+  // TODO: Drop it.
   VT::AnyTuple,
+  // TODO: Drop it.
   VT::AnyType
   >;
 
 namespace VT
 {
 
+// TODO: Drop it.
 enum class Basic : std::uint8_t
 {
   Bool, // b
@@ -76,14 +134,17 @@ enum class Basic : std::uint8_t
   Any, // ?
 };
 
+// TODO: Drop it.
 struct AnyType
 {
 };
 
+// TODO: Drop it.
 struct Variant
 {
 };
 
+// TODO: Drop it.
 struct AnyTuple
 {
 };
@@ -118,6 +179,17 @@ parse_variant_type_string (std::string_view const& string);
 namespace VF
 {
 
+/*
+using BasicMaybePointer = std::variant
+  <
+  Leaf::String,
+  Leaf::ObjectPath,
+  Leaf::Signature,
+  Leaf::AnyBasic,
+  >;
+*/
+
+// TODO: Drop it.
 enum class BasicMaybePointer : std::uint8_t
 {
   String, // s
@@ -126,6 +198,23 @@ enum class BasicMaybePointer : std::uint8_t
   Any, // ?
 };
 
+/*
+using BasicMaybeBool = std::variant
+  <
+  Leaf::Bool, // b
+  Leaf::Byte, // y
+  Leaf::I16,  // n
+  Leaf::U16,  // q
+  Leaf::I32,  // i
+  Leaf::U32,  // u
+  Leaf::I64,  // x
+  Leaf::U64,  // t
+  Leaf::Handle, // h
+  Leaf::Double, // d
+  >;
+*/
+
+// TODO: Drop it.
 enum class BasicMaybeBool : std::uint8_t
 {
   Bool, // b
@@ -140,6 +229,8 @@ enum class BasicMaybeBool : std::uint8_t
   Double, // d
 };
 
+// TODO: I'm not sure, it is probably unnecessary. Drop it? I think
+// that VariantTypeSubSet could be salvaged.
 namespace VTMod
 {
 
@@ -150,10 +241,24 @@ struct Entry;
 
 using VariantTypeSubSet = std::variant
   <
+  /*
+  Leaf::Basic,
+
+  Leaf::Variant,
+  Leaf::AnyTuple,
+  Leaf::AnyType,
+
+  VT::Array,
+   */
+  // TODO: Drop it.
   VT::Basic,
+  // TODO: Drop it.
   Array,
+  // TODO: Drop it.
   VT::Variant,
+  // TODO: Drop it.
   VT::AnyTuple,
+  // TODO: Drop it.
   VT::AnyType
   >;
 
@@ -210,6 +315,15 @@ struct Entry
 } // namespace VTMod
 
 struct AtBasicType;
+/*
+using Pointer = std::variant
+  <
+  Leaf::String,
+  Leaf::ObjectPath,
+  Leaf::Signature,
+  >;
+*/
+// TODO: Drop it.
 enum class Pointer : std::uint8_t;
 
 struct AtVariantType;
@@ -221,6 +335,10 @@ struct Maybe;
 
 using BasicFormat = std::variant
   <
+  /*
+  Leaf::Basic,
+  */
+  // TODO: Drop it.
   VT::Basic,
   AtBasicType,
   Pointer
@@ -228,11 +346,21 @@ using BasicFormat = std::variant
 
 using MaybePointer = std::variant
   <
+  /*
+  VT:Array
+  Leaf::Variant,
+  Leaf::AnyType,
+  Leaf::AnyTuple,
+  */
+  // TODO: Drop it.
   VTMod::Array,
   AtVariantType,
   BasicMaybePointer,
+  // TODO: Drop it.
   VT::Variant,
+  // TODO: Drop it.
   VT::AnyType,
+  // TODO: Drop it.
   VT::AnyTuple,
   Pointer,
   Convenience
@@ -264,9 +392,14 @@ namespace VF
 
 struct AtBasicType
 {
+  /*
+   Leaf::Basic
+  */
+  // TODO: Drop it.
   VT::Basic basic;
 };
 
+// TODO: Drop it.
 enum class Pointer : std::uint8_t
 {
   String,
@@ -276,6 +409,10 @@ enum class Pointer : std::uint8_t
 
 struct AtVariantType
 {
+  /*
+  VT::VariantType type
+  */
+  // TODO: Drop it.
   VTMod::VariantType type;
 };
 

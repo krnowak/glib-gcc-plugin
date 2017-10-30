@@ -33,10 +33,12 @@ struct Pointer;
 
 // TODO: This probably won't be enough. We will another variant like:
 //
-// std::variant<Integral, VariantTyped>
+// std::variant<Integral, Real, VariantTyped>
 //
 // Integral could store a size in bits, signedness and probably a list
 // of names from most expected to least expected.
+//
+// Real would be similar, but for floating point variables.
 //
 // VariantTyped probably can hold some extra data about GVariant,
 // GVariantBuilder or GVariantIter
