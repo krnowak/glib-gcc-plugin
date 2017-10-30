@@ -434,11 +434,11 @@ parse_maybe_format (std::string_view const& string)
       return {{{VF::MaybePointer {VF::AtVariantType {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
     }
   case 'v':
-    return {{{VF::MaybePointer {VT::Variant {}}}, std::move (rest)}};
+    return {{{VF::MaybePointer {VF::AtVariantType {VT::Variant {}}}}, std::move (rest)}};
   case '*':
-    return {{{VF::MaybePointer {VT::AnyType {}}}, std::move (rest)}};
+    return {{{VF::MaybePointer {VF::AtVariantType {VT::AnyType {}}}}, std::move (rest)}};
   case 'r':
-    return {{{VF::MaybePointer {VT::AnyTuple {}}}, std::move (rest)}};
+    return {{{VF::MaybePointer {VF::AtVariantType {VT::AnyTuple {}}}}, std::move (rest)}};
   case '&':
     {
       auto maybe_result {parse_pointer_format (rest)};
@@ -1084,9 +1084,6 @@ maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
     [](VF::VTMod::Array const& array) { return array_mod_to_variant_type (array); },
     [](VF::AtVariantType const& avt) { return variant_type_mod_to_variant_type (avt.type); },
     [](VF::BasicMaybePointer const& bmp) { return basic_maybe_pointer_to_variant_type (bmp); },
-    [](VT::Variant const& variant) { return VariantType {variant}; },
-    [](VT::AnyType const& any) { return VariantType {any}; },
-    [](VT::AnyTuple const& any) { return VariantType {any}; },
     [](VF::Pointer const& pointer) { return pointer_to_variant_type (pointer); },
     [](VF::Convenience const &convenience) { return convenience_to_variant_type (convenience); },
   }};

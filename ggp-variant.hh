@@ -244,6 +244,7 @@ using VariantTypeSubSet = std::variant
   /*
   Leaf::Basic,
 
+  // TODO: Probably don't use them. r, v and * are basically aliases to @r, @v and @*
   Leaf::Variant,
   Leaf::AnyTuple,
   Leaf::AnyType,
@@ -348,20 +349,11 @@ using MaybePointer = std::variant
   <
   /*
   VT:Array
-  Leaf::Variant,
-  Leaf::AnyType,
-  Leaf::AnyTuple,
   */
   // TODO: Drop it.
   VTMod::Array,
   AtVariantType,
   BasicMaybePointer,
-  // TODO: Drop it.
-  VT::Variant,
-  // TODO: Drop it.
-  VT::AnyType,
-  // TODO: Drop it.
-  VT::AnyTuple,
   Pointer,
   Convenience
   >;

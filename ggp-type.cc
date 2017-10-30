@@ -230,9 +230,6 @@ maybe_pointer_to_types (VF::MaybePointer const& mp)
     [](VF::VTMod::Array const&) { return array_mod_to_types (); },
     [](VF::AtVariantType const&) { return gvariant_types_v (); },
     [](VF::BasicMaybePointer const& bmb) { return basic_maybe_pointer_to_types (bmb); },
-    [](VT::Variant const&) { return gvariant_types_v (); },
-    [](VT::AnyType const&) { return gvariant_types_v (); },
-    [](VT::AnyTuple const&) { return gvariant_types_v (); },
     [](VF::Pointer const&) { return pointer_to_types (); },
     [](VF::Convenience const& convenience) { return convenience_to_types (convenience); },
   }};
