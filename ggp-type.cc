@@ -95,9 +95,6 @@ variant_type_sub_set_mod_to_types (VF::VTMod::VariantTypeSubSet const& vtss)
   auto v {Util::VisitHelper {
     [](VT::Basic const& basic) { return basic_type_to_types (basic); },
     [](VF::VTMod::Array const&) { return array_mod_to_types (); },
-    [](VT::Variant const&) { return gvariant_types_v (); },
-    [](VT::AnyTuple const&) { return gvariant_types_v (); },
-    [](VT::AnyType const&) { return gvariant_types_v (); },
   }};
   return std::visit (v, vtss);
 }
@@ -287,6 +284,8 @@ format_to_types (VariantFormat const& format)
 {
   auto v {Util::VisitHelper {
     [](VF::VTMod::VariantTypeSubSet const& vtss) { return variant_type_sub_set_mod_to_types (vtss); },
+    [](VT::Basic const& basic) { return basic_type_to_types (basic); },
+    [](VT::Array const&) { return array_mod_to_types (); },
     [](VF::AtVariantType const&) { return gvariant_types_v (); },
     [](VF::Pointer const&) { return pointer_to_types (); },
     [](VF::Convenience const& convenience) { return convenience_to_types (convenience); },

@@ -231,6 +231,8 @@ enum class BasicMaybeBool : std::uint8_t
 
 // TODO: I'm not sure, it is probably unnecessary. Drop it? I think
 // that VariantTypeSubSet could be salvaged.
+//
+// VariantTypeSubSet contains only array and basic - put that in variant format.
 namespace VTMod
 {
 
@@ -244,23 +246,12 @@ using VariantTypeSubSet = std::variant
   /*
   Leaf::Basic,
 
-  // TODO: Probably don't use them. r, v and * are basically aliases to @r, @v and @*
-  Leaf::Variant,
-  Leaf::AnyTuple,
-  Leaf::AnyType,
-
   VT::Array,
    */
   // TODO: Drop it.
   VT::Basic,
   // TODO: Drop it.
-  Array,
-  // TODO: Drop it.
-  VT::Variant,
-  // TODO: Drop it.
-  VT::AnyTuple,
-  // TODO: Drop it.
-  VT::AnyType
+  Array
   >;
 
 using VariantType = std::variant
@@ -371,6 +362,8 @@ using MaybeBool = std::variant
 using VariantFormat = std::variant
   <
   VF::VTMod::VariantTypeSubSet,
+  VT::Basic,
+  VT::Array,
   VF::AtVariantType,
   VF::Pointer,
   VF::Convenience,

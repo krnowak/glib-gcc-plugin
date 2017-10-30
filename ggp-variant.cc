@@ -748,48 +748,6 @@ parse_type_mod (std::string_view const& string)
   }
 }
 
-using ParseTypeSubSetModResult = ParseResult<VF::VTMod::VariantTypeSubSet>;
-
-std::optional<ParseTypeSubSetModResult>
-parse_type_sub_set_mod (std::string_view const& string)
-{
-  if (string.empty ())
-  {
-    return {};
-  }
-
-  auto rest {string.substr (1)};
-  switch (string.front ())
-  {
-  case 'a':
-    {
-      auto maybe_result {parse_type_mod (rest)};
-      if (!maybe_result)
-      {
-        return {};
-      }
-      return {{VF::VTMod::Array {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
-    }
-  case '*':
-    return {{VT::AnyType {}, std::move (rest)}};
-  case 'r':
-    return {{VT::AnyTuple {}, std::move (rest)}};
-  case 'v':
-    return {{VT::Variant {}, std::move (rest)}};
-  default:
-    {
-      auto maybe_result {parse_basic_type (string)};
-
-      if (!maybe_result)
-      {
-        return {};
-      }
-
-      return {{std::move (maybe_result->parsed), std::move (maybe_result->rest)}};
-    }
-  }
-}
-
 std::optional<ParseFormatResult>
 parse_single_format (std::string_view const& string)
 {
@@ -801,6 +759,15 @@ parse_single_format (std::string_view const& string)
   auto rest {string.substr (1)};
   switch (string.front ())
   {
+  case 'a':
+    {
+      auto maybe_result {parse_single_type (rest)};
+      if (!maybe_result)
+      {
+        return {};
+      }
+      return {{VT::Array {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
+    }
   case '@':
     {
       auto maybe_result {parse_type_mod (rest)};
@@ -810,6 +777,12 @@ parse_single_format (std::string_view const& string)
       }
       return {{VF::AtVariantType {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
     }
+  case 'v':
+    return {{VF::AtVariantType {VT::Variant {}}, std::move (rest)}};
+  case 'r':
+    return {{VF::AtVariantType {VT::AnyTuple {}}, std::move (rest)}};
+  case '*':
+    return {{VF::AtVariantType {VT::AnyType {}}, std::move (rest)}};
   case '&':
     {
       auto maybe_result {parse_pointer_format (rest)};
@@ -857,7 +830,7 @@ parse_single_format (std::string_view const& string)
     }
   default:
     {
-      auto maybe_result {parse_type_sub_set_mod (rest)};
+      auto maybe_result {parse_basic_type (string)};
       if (!maybe_result)
       {
         return {};
@@ -1154,6 +1127,8 @@ variant_format_to_type (VariantFormat const& format)
 {
   auto v {Util::VisitHelper {
     [](VF::VTMod::VariantTypeSubSet const& vtss) { return variant_type_sub_set_mod_to_variant_type (vtss); },
+    [](VT::Basic const& basic) { return VariantType {basic}; },
+    [](VT::Array const& array) { return VariantType {array}; },
     [](VF::AtVariantType const& avt) { return variant_type_mod_to_variant_type (avt.type); },
     [](VF::Pointer pointer) { return pointer_to_variant_type (pointer); },
     [](VF::Convenience const& convenience) { return convenience_to_variant_type (convenience); },
