@@ -239,11 +239,11 @@ parse_pointer_format (std::string_view const& string)
   switch (string.front ())
   {
   case 's':
-    return {{VF::Pointer::String, std::move (rest)}};
+    return {{{Leaf::String {}}, std::move (rest)}};
   case 'o':
-    return {{VF::Pointer::ObjectPath, std::move (rest)}};
+    return {{{Leaf::ObjectPath {}}, std::move (rest)}};
   case 'g':
-    return {{VF::Pointer::Signature, std::move (rest)}};
+    return {{{Leaf::Signature {}}, std::move (rest)}};
   default:
     return {};
   }
@@ -691,18 +691,12 @@ basic_maybe_bool_to_variant_type (VF::BasicMaybeBool const& bmb)
 VT::Basic
 pointer_to_basic_type (VF::Pointer pointer)
 {
-  switch (pointer)
-  {
-  case VF::Pointer::String:
-    return VT::Basic::String;
-  case VF::Pointer::ObjectPath:
-    return VT::Basic::ObjectPath;
-  case VF::Pointer::Signature:
-    return VT::Basic::Signature;
-  default:
-    gcc_unreachable();
-    return VT::Basic::String;
-  }
+  auto v {Util::VisitHelper {
+    [](Leaf::String const&) { return VT::Basic::String; },
+    [](Leaf::ObjectPath const&) { return VT::Basic::ObjectPath; },
+    [](Leaf::Signature const&) { return VT::Basic::Signature; },
+  }};
+  return std::visit (v, pointer);
 }
 
 VariantType

@@ -202,16 +202,12 @@ enum class BasicMaybeBool : std::uint8_t
 };
 
 struct AtBasicType;
-/*
 using Pointer = std::variant
   <
   Leaf::String,
   Leaf::ObjectPath,
-  Leaf::Signature,
+  Leaf::Signature
   >;
-*/
-// TODO: Drop it.
-enum class Pointer : std::uint8_t;
 
 struct AtVariantType;
 struct Convenience;
@@ -272,14 +268,6 @@ struct AtBasicType
   */
   // TODO: Drop it.
   VT::Basic basic;
-};
-
-// TODO: Drop it.
-enum class Pointer : std::uint8_t
-{
-  String,
-  ObjectPath,
-  Signature,
 };
 
 struct AtVariantType
