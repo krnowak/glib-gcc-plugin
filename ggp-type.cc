@@ -84,7 +84,7 @@ basic_type_to_types (VT::Basic basic)
 }
 
 std::vector<Types>
-array_mod_to_types ()
+array_to_types ()
 {
   return {{{Pointer {"GVariantBuilder"s}}, {Pointer {Pointer {"GVariantIter"s}}}}};
 }
@@ -214,7 +214,7 @@ std::vector<Types>
 maybe_pointer_to_types (VF::MaybePointer const& mp)
 {
   auto v {Util::VisitHelper {
-    [](VF::VTMod::Array const&) { return array_mod_to_types (); },
+    [](VT::Array const&) { return array_to_types (); },
     [](VF::AtVariantType const&) { return gvariant_types_v (); },
     [](VF::BasicMaybePointer const& bmb) { return basic_maybe_pointer_to_types (bmb); },
     [](VF::Pointer const&) { return pointer_to_types (); },
@@ -274,7 +274,7 @@ format_to_types (VariantFormat const& format)
 {
   auto v {Util::VisitHelper {
     [](VT::Basic const& basic) { return basic_type_to_types (basic); },
-    [](VT::Array const&) { return array_mod_to_types (); },
+    [](VT::Array const&) { return array_to_types (); },
     [](VF::AtVariantType const&) { return gvariant_types_v (); },
     [](VF::Pointer const&) { return pointer_to_types (); },
     [](VF::Convenience const& convenience) { return convenience_to_types (convenience); },

@@ -338,11 +338,7 @@ using BasicFormat = std::variant
 
 using MaybePointer = std::variant
   <
-  /*
-  VT:Array
-  */
-  // TODO: Drop it.
-  VTMod::Array,
+  VT::Array,
   AtVariantType,
   BasicMaybePointer,
   Pointer,

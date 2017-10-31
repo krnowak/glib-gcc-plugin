@@ -417,12 +417,12 @@ parse_maybe_format (std::string_view const& string)
     // pointer maybes
   case 'a':
     {
-      auto maybe_result {parse_type_mod (rest)};
+      auto maybe_result {parse_single_type (rest)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{VF::MaybePointer {VF::VTMod::Array {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
+      return {{{VF::MaybePointer {VT::Array {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
     }
   case '@':
     {
@@ -1041,7 +1041,7 @@ VariantType
 maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
 {
   auto v {Util::VisitHelper {
-    [](VF::VTMod::Array const& array) { return array_mod_to_variant_type (array); },
+    [](VT::Array const& array) { return VariantType {array}; },
     [](VF::AtVariantType const& avt) { return avt.type; },
     [](VF::BasicMaybePointer const& bmp) { return basic_maybe_pointer_to_variant_type (bmp); },
     [](VF::Pointer const& pointer) { return pointer_to_variant_type (pointer); },
