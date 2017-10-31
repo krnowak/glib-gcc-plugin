@@ -74,8 +74,6 @@ using Basic = std::variant
 namespace VT
 {
 
-// TODO: Drop it.
-enum class Basic : std::uint8_t;
 struct Array; // a
 struct Maybe; // m
 struct Tuple; // ()
@@ -85,11 +83,7 @@ struct Entry; // {}
 
 using VariantType = std::variant
   <
-  /*
   Leaf::Basic,
-   */
-  // TODO: Drop it.
-  VT::Basic,
   VT::Maybe,
   VT::Tuple,
   VT::Array,
@@ -101,25 +95,6 @@ using VariantType = std::variant
 
 namespace VT
 {
-
-// TODO: Drop it.
-enum class Basic : std::uint8_t
-{
-  Bool, // b
-  Byte, // y
-  I16,  // n
-  U16,  // q
-  I32,  // i
-  U32,  // u
-  I64,  // x
-  U64,  // t
-  Handle, // h
-  Double, // d
-  String, // s
-  ObjectPath, // o
-  Signature, // g
-  Any, // ?
-};
 
 struct Array
 {
@@ -138,7 +113,7 @@ struct Tuple
 
 struct Entry
 {
-  Basic key;
+  Leaf::Basic key;
   Util::Value<VariantType> value;
 };
 
@@ -190,11 +165,7 @@ struct Maybe;
 
 using BasicFormat = std::variant
   <
-  /*
   Leaf::Basic,
-  */
-  // TODO: Drop it.
-  VT::Basic,
   AtBasicType,
   Pointer
   >;
@@ -220,7 +191,7 @@ using MaybeBool = std::variant
 
 using VariantFormat = std::variant
   <
-  VT::Basic,
+  Leaf::Basic,
   VT::Array,
   VF::AtVariantType,
   VF::Pointer,
@@ -235,11 +206,7 @@ namespace VF
 
 struct AtBasicType
 {
-  /*
-   Leaf::Basic
-  */
-  // TODO: Drop it.
-  VT::Basic basic;
+  Leaf::Basic basic;
 };
 
 struct AtVariantType

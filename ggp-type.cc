@@ -67,45 +67,6 @@ leaf_basic_to_types (Leaf::Basic const& basic)
 }
 
 std::vector<Types>
-basic_type_to_types (VT::Basic basic)
-{
-  switch (basic)
-  {
-  case VT::Basic::Bool:
-    return {{{"gboolean"s}, {Pointer {"gboolean"s}}}};
-  case VT::Basic::Byte:
-    return {{{"guchar"s}, {Pointer {"guchar"s}}}};
-  case VT::Basic::I16:
-    return {{{"gint16"s}, {Pointer {"gint16"s}}}};
-  case VT::Basic::U16:
-    return {{{"guint16"s}, {Pointer {"guint16"s}}}};
-  case VT::Basic::I32:
-    return {{{"gint32"s}, {Pointer {"gint32"s}}}};
-  case VT::Basic::U32:
-    return {{{"guint32"s}, {Pointer {"guint32"s}}}};
-  case VT::Basic::I64:
-    return {{{"gint64"s}, {Pointer {"gint64"s}}}};
-  case VT::Basic::U64:
-    return {{{"guint64"s}, {Pointer {"guint64"s}}}};
-  case VT::Basic::Handle:
-    return {{{"gint32"s}, {Pointer {"gint32"s}}}};
-  case VT::Basic::Double:
-    return {{{"gdouble"s}, {Pointer {"gdouble"s}}}};
-  case VT::Basic::String:
-    return {{const_str (), {Pointer {Pointer {"gchar"s}}}}};
-  case VT::Basic::ObjectPath:
-    return {{const_str (), {Pointer {Pointer {"gchar"s}}}}};
-  case VT::Basic::Signature:
-    return {{const_str (), {Pointer {Pointer {"gchar"s}}}}};
-  case VT::Basic::Any:
-    return gvariant_types_v ();
-  default:
-    gcc_unreachable ();
-    return {};
-  }
-}
-
-std::vector<Types>
 array_to_types ()
 {
   return {{{Pointer {"GVariantBuilder"s}}, {Pointer {Pointer {"GVariantIter"s}}}}};
@@ -176,7 +137,7 @@ entry_to_types (VF::Entry const& entry);
 std::vector<Types>
 maybe_bool_to_types (VF::MaybeBool const& mb)
 {
-  auto types {basic_type_to_types (VT::Basic::Bool)};
+  auto types {leaf_basic_to_types (Leaf::Bool {})};
   auto v {Util::VisitHelper {
     [](VF::BasicMaybeBool const& bmb) { return basic_maybe_bool_to_types (bmb); },
     [](VF::Entry const& entry) { return entry_to_types (entry); },
@@ -242,7 +203,7 @@ std::vector<Types>
 basic_format_to_types (VF::BasicFormat const& bf)
 {
   auto v {Util::VisitHelper {
-    [](VT::Basic const& basic) { return basic_type_to_types (basic); },
+    [](Leaf::Basic const& basic) { return leaf_basic_to_types (basic); },
     [](VF::AtBasicType const&) { return gvariant_types_v (); },
     [](VF::Pointer const&) { return pointer_to_types (); },
   }};
@@ -263,7 +224,7 @@ std::vector<Types>
 format_to_types (VariantFormat const& format)
 {
   auto v {Util::VisitHelper {
-    [](VT::Basic const& basic) { return basic_type_to_types (basic); },
+    [](Leaf::Basic const& basic) { return leaf_basic_to_types (basic); },
     [](VT::Array const&) { return array_to_types (); },
     [](VF::AtVariantType const&) { return gvariant_types_v (); },
     [](VF::Pointer const&) { return pointer_to_types (); },
