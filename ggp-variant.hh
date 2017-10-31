@@ -159,7 +159,6 @@ using BasicMaybePointer = std::variant
   Leaf::AnyBasic
   >;
 
-/*
 using BasicMaybeBool = std::variant
   <
   Leaf::Bool, // b
@@ -171,24 +170,8 @@ using BasicMaybeBool = std::variant
   Leaf::I64,  // x
   Leaf::U64,  // t
   Leaf::Handle, // h
-  Leaf::Double, // d
+  Leaf::Double // d
   >;
-*/
-
-// TODO: Drop it.
-enum class BasicMaybeBool : std::uint8_t
-{
-  Bool, // b
-  Byte, // y
-  I16,  // n
-  U16,  // q
-  I32,  // i
-  U32,  // u
-  I64,  // x
-  U64,  // t
-  Handle, // h
-  Double, // d
-};
 
 struct AtBasicType;
 using Pointer = std::variant

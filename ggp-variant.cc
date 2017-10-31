@@ -499,25 +499,25 @@ parse_maybe_format (std::string_view const& string)
       case VT::Basic::Any:
         return {{{VF::MaybePointer {VF::BasicMaybePointer {Leaf::AnyBasic {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::Bool:
-        return {{{VF::MaybeBool {VF::BasicMaybeBool::Bool}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybeBool {VF::BasicMaybeBool {Leaf::Bool {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::Byte:
-        return {{{VF::MaybeBool {VF::BasicMaybeBool::Byte}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybeBool {VF::BasicMaybeBool {Leaf::Byte {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::I16:
-        return {{{VF::MaybeBool {VF::BasicMaybeBool::I16}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybeBool {VF::BasicMaybeBool {Leaf::I16 {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::U16:
-        return {{{VF::MaybeBool {VF::BasicMaybeBool::U16}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybeBool {VF::BasicMaybeBool {Leaf::U16 {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::I32:
-        return {{{VF::MaybeBool {VF::BasicMaybeBool::I32}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybeBool {VF::BasicMaybeBool {Leaf::I32 {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::U32:
-        return {{{VF::MaybeBool {VF::BasicMaybeBool::U32}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybeBool {VF::BasicMaybeBool {Leaf::U32 {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::I64:
-        return {{{VF::MaybeBool {VF::BasicMaybeBool::I64}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybeBool {VF::BasicMaybeBool {Leaf::I64 {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::U64:
-        return {{{VF::MaybeBool {VF::BasicMaybeBool::U64}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybeBool {VF::BasicMaybeBool {Leaf::U64 {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::Handle:
-        return {{{VF::MaybeBool {VF::BasicMaybeBool::Handle}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybeBool {VF::BasicMaybeBool {Leaf::Handle {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::Double:
-        return {{{VF::MaybeBool {VF::BasicMaybeBool::Double}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybeBool {VF::BasicMaybeBool {Leaf::Double {}}}}, std::move (maybe_result->rest)}};
       }
       return {};
     }
@@ -639,46 +639,37 @@ namespace
 {
 
 VariantType
-basic_maybe_pointer_to_variant_type (VF::BasicMaybePointer const& bmp)
+leaf_basic_to_variant_type (Leaf::Basic const& basic)
 {
   auto v {Util::VisitHelper {
+    [](Leaf::Bool const&) { return VariantType {VT::Basic::Bool}; },
+    [](Leaf::Byte const&) { return VariantType {VT::Basic::Byte}; },
+    [](Leaf::I16 const&) { return VariantType {VT::Basic::I16}; },
+    [](Leaf::U16 const&) { return VariantType {VT::Basic::U16}; },
+    [](Leaf::I32 const&) { return VariantType {VT::Basic::I32}; },
+    [](Leaf::U32 const&) { return VariantType {VT::Basic::U32}; },
+    [](Leaf::I64 const&) { return VariantType {VT::Basic::I64}; },
+    [](Leaf::U64 const&) { return VariantType {VT::Basic::U64}; },
+    [](Leaf::Handle const&) { return VariantType {VT::Basic::Handle}; },
+    [](Leaf::Double const&) { return VariantType {VT::Basic::Double}; },
     [](Leaf::String const&) { return VariantType {VT::Basic::String}; },
     [](Leaf::ObjectPath const&) { return VariantType {VT::Basic::ObjectPath}; },
     [](Leaf::Signature const&) { return VariantType {VT::Basic::Signature}; },
     [](Leaf::AnyBasic const&) { return VariantType {VT::Basic::Any}; },
   }};
-  return std::visit (v, bmp);
+  return std::visit (v, basic);
+}
+
+VariantType
+basic_maybe_pointer_to_variant_type (VF::BasicMaybePointer const& bmp)
+{
+  return leaf_basic_to_variant_type (Util::generalize<Leaf::Basic> (bmp));
 }
 
 VariantType
 basic_maybe_bool_to_variant_type (VF::BasicMaybeBool const& bmb)
 {
-  switch (bmb)
-  {
-  case VF::BasicMaybeBool::Bool:
-    return {VT::Basic::Bool};
-  case VF::BasicMaybeBool::Byte:
-    return {VT::Basic::Byte};
-  case VF::BasicMaybeBool::I16:
-    return {VT::Basic::I16};
-  case VF::BasicMaybeBool::U16:
-    return {VT::Basic::U16};
-  case VF::BasicMaybeBool::I32:
-    return {VT::Basic::I32};
-  case VF::BasicMaybeBool::U32:
-    return {VT::Basic::U32};
-  case VF::BasicMaybeBool::I64:
-    return {VT::Basic::I64};
-  case VF::BasicMaybeBool::U64:
-    return {VT::Basic::U64};
-  case VF::BasicMaybeBool::Handle:
-    return {VT::Basic::Handle};
-  case VF::BasicMaybeBool::Double:
-    return {VT::Basic::Double};
-  default:
-    gcc_unreachable ();
-    return {VT::Basic::Bool};
-  }
+  return leaf_basic_to_variant_type (Util::generalize<Leaf::Basic> (bmb));
 }
 
 VT::Basic

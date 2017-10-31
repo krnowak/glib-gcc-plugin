@@ -45,6 +45,28 @@ const_str ()
 }
 
 std::vector<Types>
+leaf_basic_to_types (Leaf::Basic const& basic)
+{
+  auto v {Util::VisitHelper {
+    [](Leaf::Bool const&) { return std::vector {Types {{"gboolean"s}, {Pointer {"gboolean"s}}}}; },
+    [](Leaf::Byte const&) { return std::vector {Types {{"guchar"s}, {Pointer {"guchar"s}}}}; },
+    [](Leaf::I16 const&) { return std::vector {Types {{"gint16"s}, {Pointer {"gint16"s}}}}; },
+    [](Leaf::U16 const&) { return std::vector {Types {{"guint16"s}, {Pointer {"guint16"s}}}}; },
+    [](Leaf::I32 const&) { return std::vector {Types {{"gint32"s}, {Pointer {"gint32"s}}}}; },
+    [](Leaf::U32 const&) { return std::vector {Types {{"guint32"s}, {Pointer {"guint32"s}}}}; },
+    [](Leaf::I64 const&) { return std::vector {Types {{"gint64"s}, {Pointer {"gint64"s}}}}; },
+    [](Leaf::U64 const&) { return std::vector {Types {{"guint64"s}, {Pointer {"guint64"s}}}}; },
+    [](Leaf::Handle const&) { return std::vector {Types {{"gint32"s}, {Pointer {"gint32"s}}}}; },
+    [](Leaf::Double const&) { return std::vector {Types {{"gdouble"s}, {Pointer {"gdouble"s}}}}; },
+    [](Leaf::String const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
+    [](Leaf::ObjectPath const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
+    [](Leaf::Signature const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
+    [](Leaf::AnyBasic const&) { return gvariant_types_v (); },
+  }};
+  return std::visit (v, basic);
+}
+
+std::vector<Types>
 basic_type_to_types (VT::Basic basic)
 {
   switch (basic)
@@ -139,32 +161,7 @@ convenience_to_types (VF::Convenience const& convenience)
 std::vector<Types>
 basic_maybe_bool_to_types (VF::BasicMaybeBool const& bmb)
 {
-  switch (bmb)
-  {
-  case VF::BasicMaybeBool::Bool:
-    return {{{"gboolean"s}, {Pointer {"gboolean"s}}}};
-  case VF::BasicMaybeBool::Byte:
-    return {{{"guchar"s}, {Pointer {"guchar"s}}}};
-  case VF::BasicMaybeBool::I16:
-    return {{{"gint16"s}, {Pointer {"gint16"s}}}};
-  case VF::BasicMaybeBool::U16:
-    return {{{"guint16"s}, {Pointer {"guint16"s}}}};
-  case VF::BasicMaybeBool::I32:
-    return {{{"gint32"s}, {Pointer {"gint32"s}}}};
-  case VF::BasicMaybeBool::U32:
-    return {{{"guint32"s}, {Pointer {"guint32"s}}}};
-  case VF::BasicMaybeBool::I64:
-    return {{{"gint64"s}, {Pointer {"gint64"s}}}};
-  case VF::BasicMaybeBool::U64:
-    return {{{"guint64"s}, {Pointer {"guint64"s}}}};
-  case VF::BasicMaybeBool::Handle:
-    return {{{"gint32"s}, {Pointer {"gint32"s}}}};
-  case VF::BasicMaybeBool::Double:
-    return {{{"gdouble"s}, {Pointer {"gdouble"s}}}};
-  default:
-    gcc_unreachable ();
-    return {};
-  }
+  return leaf_basic_to_types (Util::generalize<Leaf::Basic> (bmb));
 }
 
 std::vector<Types>
