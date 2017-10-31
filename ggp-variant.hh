@@ -76,12 +76,6 @@ namespace VT
 
 // TODO: Drop it.
 enum class Basic : std::uint8_t;
-// TODO: Drop it.
-struct Variant; // v
-// TODO: Drop it.
-struct AnyTuple; // r
-// TODO: Drop it.
-struct AnyType; // *
 struct Array; // a
 struct Maybe; // m
 struct Tuple; // ()
@@ -93,10 +87,6 @@ using VariantType = std::variant
   <
   /*
   Leaf::Basic,
-
-  Leaf::Variant,
-  Leaf::AnyTuple,
-  Leaf::AnyType,
    */
   // TODO: Drop it.
   VT::Basic,
@@ -104,12 +94,9 @@ using VariantType = std::variant
   VT::Tuple,
   VT::Array,
   VT::Entry,
-  // TODO: Drop it.
-  VT::Variant,
-  // TODO: Drop it.
-  VT::AnyTuple,
-  // TODO: Drop it.
-  VT::AnyType
+  Leaf::Variant,
+  Leaf::AnyTuple,
+  Leaf::AnyType
   >;
 
 namespace VT
@@ -132,21 +119,6 @@ enum class Basic : std::uint8_t
   ObjectPath, // o
   Signature, // g
   Any, // ?
-};
-
-// TODO: Drop it.
-struct AnyType
-{
-};
-
-// TODO: Drop it.
-struct Variant
-{
-};
-
-// TODO: Drop it.
-struct AnyTuple
-{
 };
 
 struct Array

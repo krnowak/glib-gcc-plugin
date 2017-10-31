@@ -185,11 +185,11 @@ parse_single_type (std::string_view const& string)
       return {{VT::Array {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
     }
   case '*':
-    return {{VT::AnyType {}, std::move (rest)}};
+    return {{Leaf::AnyType {}, std::move (rest)}};
   case 'r':
-    return {{VT::AnyTuple {}, std::move (rest)}};
+    return {{Leaf::AnyTuple {}, std::move (rest)}};
   case 'v':
-    return {{VT::Variant {}, std::move (rest)}};
+    return {{Leaf::Variant {}, std::move (rest)}};
   default:
     {
       auto maybe_result {parse_basic_type (string)};
@@ -429,11 +429,11 @@ parse_maybe_format (std::string_view const& string)
       return {{{VF::MaybePointer {VF::AtVariantType {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
     }
   case 'v':
-    return {{{VF::MaybePointer {VF::AtVariantType {VT::Variant {}}}}, std::move (rest)}};
+    return {{{VF::MaybePointer {VF::AtVariantType {Leaf::Variant {}}}}, std::move (rest)}};
   case '*':
-    return {{{VF::MaybePointer {VF::AtVariantType {VT::AnyType {}}}}, std::move (rest)}};
+    return {{{VF::MaybePointer {VF::AtVariantType {Leaf::AnyType {}}}}, std::move (rest)}};
   case 'r':
-    return {{{VF::MaybePointer {VF::AtVariantType {VT::AnyTuple {}}}}, std::move (rest)}};
+    return {{{VF::MaybePointer {VF::AtVariantType {Leaf::AnyTuple {}}}}, std::move (rest)}};
   case '&':
     {
       auto maybe_result {parse_pointer_format (rest)};
@@ -554,11 +554,11 @@ parse_single_format (std::string_view const& string)
       return {{VF::AtVariantType {std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
     }
   case 'v':
-    return {{VF::AtVariantType {VT::Variant {}}, std::move (rest)}};
+    return {{VF::AtVariantType {Leaf::Variant {}}, std::move (rest)}};
   case 'r':
-    return {{VF::AtVariantType {VT::AnyTuple {}}, std::move (rest)}};
+    return {{VF::AtVariantType {Leaf::AnyTuple {}}, std::move (rest)}};
   case '*':
-    return {{VF::AtVariantType {VT::AnyType {}}, std::move (rest)}};
+    return {{VF::AtVariantType {Leaf::AnyType {}}, std::move (rest)}};
   case '&':
     {
       auto maybe_result {parse_pointer_format (rest)};
