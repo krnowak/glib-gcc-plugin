@@ -361,7 +361,6 @@ using MaybeBool = std::variant
 
 using VariantFormat = std::variant
   <
-  VF::VTMod::VariantTypeSubSet,
   VT::Basic,
   VT::Array,
   VF::AtVariantType,

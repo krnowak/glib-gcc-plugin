@@ -90,16 +90,6 @@ array_mod_to_types ()
 }
 
 std::vector<Types>
-variant_type_sub_set_mod_to_types (VF::VTMod::VariantTypeSubSet const& vtss)
-{
-  auto v {Util::VisitHelper {
-    [](VT::Basic const& basic) { return basic_type_to_types (basic); },
-    [](VF::VTMod::Array const&) { return array_mod_to_types (); },
-  }};
-  return std::visit (v, vtss);
-}
-
-std::vector<Types>
 pointer_to_types ()
 {
   return {{const_str (), {Pointer {Pointer {Const {"gchar"s}}}}}};
@@ -283,7 +273,6 @@ std::vector<Types>
 format_to_types (VariantFormat const& format)
 {
   auto v {Util::VisitHelper {
-    [](VF::VTMod::VariantTypeSubSet const& vtss) { return variant_type_sub_set_mod_to_types (vtss); },
     [](VT::Basic const& basic) { return basic_type_to_types (basic); },
     [](VT::Array const&) { return array_mod_to_types (); },
     [](VF::AtVariantType const&) { return gvariant_types_v (); },
