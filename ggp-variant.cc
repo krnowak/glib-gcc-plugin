@@ -491,13 +491,13 @@ parse_maybe_format (std::string_view const& string)
       switch (maybe_result->parsed)
       {
       case VT::Basic::String:
-        return {{{VF::MaybePointer {VF::BasicMaybePointer::String}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybePointer {VF::BasicMaybePointer {Leaf::String {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::ObjectPath:
-        return {{{VF::MaybePointer {VF::BasicMaybePointer::ObjectPath}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybePointer {VF::BasicMaybePointer {Leaf::ObjectPath {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::Signature:
-        return {{{VF::MaybePointer {VF::BasicMaybePointer::Signature}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybePointer {VF::BasicMaybePointer {Leaf::Signature {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::Any:
-        return {{{VF::MaybePointer {VF::BasicMaybePointer::Any}}, std::move (maybe_result->rest)}};
+        return {{{VF::MaybePointer {VF::BasicMaybePointer {Leaf::AnyBasic {}}}}, std::move (maybe_result->rest)}};
       case VT::Basic::Bool:
         return {{{VF::MaybeBool {VF::BasicMaybeBool::Bool}}, std::move (maybe_result->rest)}};
       case VT::Basic::Byte:
@@ -641,20 +641,13 @@ namespace
 VariantType
 basic_maybe_pointer_to_variant_type (VF::BasicMaybePointer const& bmp)
 {
-  switch (bmp)
-  {
-  case VF::BasicMaybePointer::String:
-    return {VT::Basic::String};
-  case VF::BasicMaybePointer::ObjectPath:
-    return {VT::Basic::ObjectPath};
-  case VF::BasicMaybePointer::Signature:
-    return {VT::Basic::Signature};
-  case VF::BasicMaybePointer::Any:
-    return {VT::Basic::Any};
-  default:
-    gcc_unreachable ();
-    return {VT::Basic::String};
-  }
+  auto v {Util::VisitHelper {
+    [](Leaf::String const&) { return VariantType {VT::Basic::String}; },
+    [](Leaf::ObjectPath const&) { return VariantType {VT::Basic::ObjectPath}; },
+    [](Leaf::Signature const&) { return VariantType {VT::Basic::Signature}; },
+    [](Leaf::AnyBasic const&) { return VariantType {VT::Basic::Any}; },
+  }};
+  return std::visit (v, bmp);
 }
 
 VariantType

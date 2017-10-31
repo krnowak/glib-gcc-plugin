@@ -194,20 +194,13 @@ maybe_bool_to_types (VF::MaybeBool const& mb)
 std::vector<Types>
 basic_maybe_pointer_to_types (VF::BasicMaybePointer const& bmp)
 {
-  switch (bmp)
-  {
-  case VF::BasicMaybePointer::String:
-    return {{const_str (), {Pointer {Pointer {"gchar"s}}}}};
-  case VF::BasicMaybePointer::ObjectPath:
-    return {{const_str (), {Pointer {Pointer {"gchar"s}}}}};
-  case VF::BasicMaybePointer::Signature:
-    return {{const_str (), {Pointer {Pointer {"gchar"s}}}}};
-  case VF::BasicMaybePointer::Any:
-    return gvariant_types_v ();
-  default:
-    gcc_unreachable ();
-    return {};
-  }
+  auto v {Util::VisitHelper {
+    [](Leaf::String const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
+    [](Leaf::ObjectPath const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
+    [](Leaf::Signature const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
+    [](Leaf::AnyBasic const&) { return gvariant_types_v (); },
+  }};
+  return std::visit (v, bmp);
 }
 
 std::vector<Types>

@@ -151,24 +151,13 @@ parse_variant_type_string (std::string_view const& string);
 namespace VF
 {
 
-/*
 using BasicMaybePointer = std::variant
   <
   Leaf::String,
   Leaf::ObjectPath,
   Leaf::Signature,
-  Leaf::AnyBasic,
+  Leaf::AnyBasic
   >;
-*/
-
-// TODO: Drop it.
-enum class BasicMaybePointer : std::uint8_t
-{
-  String, // s
-  ObjectPath, // o
-  Signature, // g
-  Any, // ?
-};
 
 /*
 using BasicMaybeBool = std::variant
