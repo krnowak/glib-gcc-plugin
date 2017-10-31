@@ -393,11 +393,7 @@ enum class Pointer : std::uint8_t
 
 struct AtVariantType
 {
-  /*
-  VT::VariantType type
-  */
-  // TODO: Drop it.
-  VTMod::VariantType type;
+  VariantType type;
 };
 
 struct Convenience

@@ -426,7 +426,7 @@ parse_maybe_format (std::string_view const& string)
     }
   case '@':
     {
-      auto maybe_result {parse_type_mod (rest)};
+      auto maybe_result {parse_single_type (rest)};
       if (!maybe_result)
       {
         return {};
@@ -770,7 +770,7 @@ parse_single_format (std::string_view const& string)
     }
   case '@':
     {
-      auto maybe_result {parse_type_mod (rest)};
+      auto maybe_result {parse_single_type (rest)};
       if (!maybe_result)
       {
         return {};
@@ -1042,7 +1042,7 @@ maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
 {
   auto v {Util::VisitHelper {
     [](VF::VTMod::Array const& array) { return array_mod_to_variant_type (array); },
-    [](VF::AtVariantType const& avt) { return variant_type_mod_to_variant_type (avt.type); },
+    [](VF::AtVariantType const& avt) { return avt.type; },
     [](VF::BasicMaybePointer const& bmp) { return basic_maybe_pointer_to_variant_type (bmp); },
     [](VF::Pointer const& pointer) { return pointer_to_variant_type (pointer); },
     [](VF::Convenience const &convenience) { return convenience_to_variant_type (convenience); },
@@ -1115,7 +1115,7 @@ variant_format_to_type (VariantFormat const& format)
   auto v {Util::VisitHelper {
     [](VT::Basic const& basic) { return VariantType {basic}; },
     [](VT::Array const& array) { return VariantType {array}; },
-    [](VF::AtVariantType const& avt) { return variant_type_mod_to_variant_type (avt.type); },
+    [](VF::AtVariantType const& avt) { return avt.type; },
     [](VF::Pointer pointer) { return pointer_to_variant_type (pointer); },
     [](VF::Convenience const& convenience) { return convenience_to_variant_type (convenience); },
     [](VF::Maybe const& maybe) { return maybe_to_variant_type (maybe); },
