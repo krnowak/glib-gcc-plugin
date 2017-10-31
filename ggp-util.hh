@@ -21,7 +21,12 @@
 
 #include "ggp-gcc.hh"
 
+#include "ggp-util-detail.hh"
+
 #include <memory>
+#include <type_traits>
+#include <utility>
+#include <variant>
 
 #define GGP_UTIL_STR_HELP_(x) #x
 #define GGP_UTIL_STR(x) GGP_UTIL_STR_HELP_(x)
@@ -131,6 +136,23 @@ value (Args&&... args)
 
 template<class... TypeP> struct VisitHelper : TypeP... { using TypeP::operator()...; };
 template<class... TypeP> VisitHelper(TypeP...) -> VisitHelper<TypeP...>;
+
+template <typename VariantTo,
+          typename VariantFrom,
+          typename = std::enable_if<Detail::is_std_variant_v<VariantTo> &&
+                                    Detail::is_std_variant_v<VariantFrom>>>
+VariantTo
+generalize (VariantFrom&& v)
+{
+  return std::visit ([](auto&& value)
+                     {
+                       using ArgType = decltype (value);
+                       using ArgTypeInVariant = std::decay_t<ArgType>;
+                       Detail::std_variant_type_check<ArgTypeInVariant, VariantTo> ();
+                       return VariantTo {std::in_place_type<ArgTypeInVariant>, std::forward<ArgType> (value)};
+                     },
+                     std::forward<VariantFrom> (v));
+}
 
 } // namespace Util
 
