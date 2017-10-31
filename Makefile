@@ -20,9 +20,11 @@ all: $(PLUGIN)
 
 ifeq ($(CXX),g++)
 COMPILER_CXXFLAGS := -std=c++17
+COMPILER_LDFLAGS :=
 endif
 ifeq ($(CXX),clang++)
 COMPILER_CXXFLAGS := -std=c++1z --stdlib=libc++
+COMPILER_LDFLAGS := --stdlib=libc++
 endif
 ifeq ($(COMPILER_CXXFLAGS),)
 $(error unknown compiler $(CXX), use clang++ or g++)
@@ -37,7 +39,7 @@ GGP_SOURCES := $(GGP_CC_HH_SOURCES) ggp-plugin.cc
 %.o: Makefile
 
 $(PLUGIN): $(GGP_SOURCES:.cc=.o)
-	g++ -shared -fno-rtti -fPIC -o $@ $^
+	$(CXX) -shared -fno-rtti -fPIC -o $@ $(COMPILER_LDFLAGS) $^
 
 test: $(PLUGIN)
 	gcc -fplugin=./$(PLUGIN) -c test.c
