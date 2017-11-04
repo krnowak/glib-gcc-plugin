@@ -26,56 +26,142 @@ namespace
 
 using namespace std::string_literals;
 
-Types
-gvariant_types ()
+PlainType
+gchar_type ()
 {
-  return {{Pointer {"GVariant"s}}, {Pointer {Pointer {"GVariant"s}}}};
+  return {Integral {{"gchar"s, "char"s}, {}, 1u, Signedness::Any}};
+}
+
+PlainType
+gboolean_type ()
+{
+  return {Integral {{"gboolean"s}, {"gint"s, "int"s}, SIZEOF_INT, Signedness::Any}};
+}
+
+PlainType
+guchar_type ()
+{
+  return {Integral {{"guchar"s}, {}, 1u, Signedness::Unsigned}};
+}
+
+PlainType
+gint16_type ()
+{
+  return {Integral {{"gint16"s}, {}, 2u, Signedness::Signed}};
+}
+
+PlainType
+guint16_type ()
+{
+  return {Integral {{"guint16"s}, {}, 2u, Signedness::Unsigned}};
+}
+
+PlainType
+gint32_type ()
+{
+  return {Integral {{"gint32"s}, {}, 4u, Signedness::Signed}};
+}
+
+PlainType
+guint32_type ()
+{
+  return {Integral {{"guint32"s}, {}, 4u, Signedness::Unsigned}};
+}
+
+PlainType
+gint64_type ()
+{
+  return {Integral {{"gint64"s}, {}, 8u, Signedness::Signed}};
+}
+
+PlainType
+guint64_type ()
+{
+  return {Integral {{"guint64"s}, {}, 8u, Signedness::Unsigned}};
+}
+
+PlainType
+handle_type ()
+{
+  return {Integral {{"gint32"s}, {}, 4u, Signedness::Signed}};
+}
+
+PlainType
+gdouble_type ()
+{
+  return {Real {{"gdouble", "double"}, 8u}};
+}
+
+template <typename T>
+std::vector<Types>
+types (T const& t)
+{
+  return {{{t}, {Pointer {t}}}};
+}
+
+Pointer
+gvariant_type (VariantType const& vt)
+{
+  return {PlainType {VariantTyped {"GVariant"s, {vt}}}};
 }
 
 std::vector<Types>
-gvariant_types_v ()
+gvariant_types_v (VariantType const& vt)
 {
-  return {gvariant_types ()};
+  return types (gvariant_type (vt));
 }
 
-Type
+Pointer
 const_str ()
 {
-  return {Pointer {Const {"gchar"s}}};
+  return {Const {gchar_type ()}};
+}
+
+Pointer
+str ()
+{
+  return {gchar_type ()};
+}
+
+std::vector<Types>
+string_types ()
+{
+  return {{{const_str ()}, {Pointer {str ()}}}};
 }
 
 std::vector<Types>
 leaf_basic_to_types (Leaf::Basic const& basic)
 {
   auto v {Util::VisitHelper {
-    [](Leaf::Bool const&) { return std::vector {Types {{"gboolean"s}, {Pointer {"gboolean"s}}}}; },
-    [](Leaf::Byte const&) { return std::vector {Types {{"guchar"s}, {Pointer {"guchar"s}}}}; },
-    [](Leaf::I16 const&) { return std::vector {Types {{"gint16"s}, {Pointer {"gint16"s}}}}; },
-    [](Leaf::U16 const&) { return std::vector {Types {{"guint16"s}, {Pointer {"guint16"s}}}}; },
-    [](Leaf::I32 const&) { return std::vector {Types {{"gint32"s}, {Pointer {"gint32"s}}}}; },
-    [](Leaf::U32 const&) { return std::vector {Types {{"guint32"s}, {Pointer {"guint32"s}}}}; },
-    [](Leaf::I64 const&) { return std::vector {Types {{"gint64"s}, {Pointer {"gint64"s}}}}; },
-    [](Leaf::U64 const&) { return std::vector {Types {{"guint64"s}, {Pointer {"guint64"s}}}}; },
-    [](Leaf::Handle const&) { return std::vector {Types {{"gint32"s}, {Pointer {"gint32"s}}}}; },
-    [](Leaf::Double const&) { return std::vector {Types {{"gdouble"s}, {Pointer {"gdouble"s}}}}; },
-    [](Leaf::String const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
-    [](Leaf::ObjectPath const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
-    [](Leaf::Signature const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
-    [](Leaf::AnyBasic const&) { return gvariant_types_v (); },
+    [](Leaf::Bool const&) { return types (gboolean_type ()); },
+    [](Leaf::Byte const&) { return types (guchar_type ()); },
+    [](Leaf::I16 const&) { return types (gint16_type ()); },
+    [](Leaf::U16 const&) { return types (guint16_type ()); },
+    [](Leaf::I32 const&) { return types (gint32_type ()); },
+    [](Leaf::U32 const&) { return types (guint32_type ()); },
+    [](Leaf::I64 const&) { return types (gint64_type ()); },
+    [](Leaf::U64 const&) { return types (guint64_type ()); },
+    [](Leaf::Handle const&) { return types (handle_type ()); },
+    [](Leaf::Double const&) { return types (gdouble_type ()); },
+    [](Leaf::String const&) { return string_types (); },
+    [](Leaf::ObjectPath const&) { return string_types (); },
+    [](Leaf::Signature const&) { return string_types (); },
+    [](Leaf::AnyBasic const& any) { return gvariant_types_v (VariantType {Leaf::Basic {any}}); },
   }};
   return std::visit (v, basic);
 }
 
+template <typename Ptr>
 std::vector<Types>
-array_to_types ()
+array_to_types (VariantType const& vt)
 {
-  return {{{Pointer {"GVariantBuilder"s}}, {Pointer {Pointer {"GVariantIter"s}}}}};
+  return {{{Ptr {PlainType {VariantTyped {"GVariantBuilder"s, {vt}}}}}, {Ptr {Pointer {PlainType {VariantTyped {"GVariantIter"s, {vt}}}}}}}};
 }
 
 std::vector<Types>
 pointer_to_types ()
 {
-  return {{const_str (), {Pointer {Pointer {Const {"gchar"s}}}}}};
+  return {{{const_str ()}, {Pointer {const_str ()}}}};
 }
 
 std::vector<Types>
@@ -87,13 +173,13 @@ convenience_to_types (VF::Convenience const& convenience)
   case VF::Convenience::Type::ObjectPathArray:
   case VF::Convenience::Type::ByteStringArray:
     {
-      auto for_new {Type {Pointer {Const {Pointer {Const {"gchar"s}}}}}};
+      auto for_new {Type {Pointer {Const {const_str ()}}}};
       switch (convenience.kind)
       {
       case VF::Convenience::Kind::Constant:
-        return {{for_new, {Pointer {Pointer {Pointer {Const {"gchar"s}}}}}}};
+        return {{for_new, {Pointer {Pointer {const_str ()}}}}};
       case VF::Convenience::Kind::Duplicated:
-        return {{for_new, {Pointer {Pointer {Pointer {"gchar"s}}}}}};
+        return {{for_new, {Pointer {Pointer {str ()}}}}};
       default:
         gcc_unreachable ();
         return {};
@@ -101,13 +187,13 @@ convenience_to_types (VF::Convenience const& convenience)
     }
   case VF::Convenience::Type::ByteString:
     {
-      auto for_new {Type {Pointer {Const {"gchar"s}}}};
+      auto for_new {Type {const_str ()}};
       switch (convenience.kind)
       {
       case VF::Convenience::Kind::Constant:
-        return {{for_new, {Pointer {Pointer {Const {"gchar"s}}}}}};
+        return {{for_new, {Pointer {const_str ()}}}};
       case VF::Convenience::Kind::Duplicated:
-        return {{for_new, {Pointer {Pointer {"gchar"s}}}}};
+        return {{for_new, {Pointer {str ()}}}};
       default:
         gcc_unreachable ();
         return {};
@@ -149,24 +235,26 @@ maybe_bool_to_types (VF::MaybeBool const& mb)
   return types;
 }
 
+// TODO: const_str() returns Pointer, not NullablePointer
 std::vector<Types>
 basic_maybe_pointer_to_types (VF::BasicMaybePointer const& bmp)
 {
   auto v {Util::VisitHelper {
-    [](Leaf::String const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
-    [](Leaf::ObjectPath const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
-    [](Leaf::Signature const&) { return std::vector {Types {const_str (), {Pointer {Pointer {"gchar"s}}}}}; },
-    [](Leaf::AnyBasic const&) { return gvariant_types_v (); },
+    [](Leaf::String const&) { return std::vector {Types {{const_str ()}, {Pointer {str ()}}}}; },
+    [](Leaf::ObjectPath const&) { return std::vector {Types {{const_str ()}, {Pointer {str ()}}}}; },
+    [](Leaf::Signature const&) { return std::vector {Types {{const_str ()}, {Pointer {str ()}}}}; },
+    [](Leaf::AnyBasic const& any) { return gvariant_types_v (VariantType {Leaf::Basic {any}}); },
   }};
   return std::visit (v, bmp);
 }
 
+// TODO: we need to return NullablePointer here.
 std::vector<Types>
 maybe_pointer_to_types (VF::MaybePointer const& mp)
 {
   auto v {Util::VisitHelper {
-    [](VT::Array const&) { return array_to_types (); },
-    [](VF::AtVariantType const&) { return gvariant_types_v (); },
+    [](VT::Array const& array) { return array_to_types<NullablePointer> (array.element_type); },
+    [](VF::AtVariantType const& avt) { return gvariant_types_v (avt.type); },
     [](VF::BasicMaybePointer const& bmb) { return basic_maybe_pointer_to_types (bmb); },
     [](VF::Pointer const&) { return pointer_to_types (); },
     [](VF::Convenience const& convenience) { return convenience_to_types (convenience); },
@@ -204,7 +292,7 @@ basic_format_to_types (VF::BasicFormat const& bf)
 {
   auto v {Util::VisitHelper {
     [](Leaf::Basic const& basic) { return leaf_basic_to_types (basic); },
-    [](VF::AtBasicType const&) { return gvariant_types_v (); },
+    [](VF::AtBasicType const& abt) { return gvariant_types_v (VariantType {abt.basic}); },
     [](VF::Pointer const&) { return pointer_to_types (); },
   }};
   return std::visit (v, bf);
@@ -221,12 +309,22 @@ entry_to_types (VF::Entry const& entry)
 }
 
 std::vector<Types>
+format_array_to_types (VariantType const& vt)
+{
+  if (variant_type_is_definite (vt))
+  {
+    return array_to_types<NullablePointer> (vt);
+  }
+  return array_to_types<Pointer> (vt);
+}
+
+std::vector<Types>
 format_to_types (VariantFormat const& format)
 {
   auto v {Util::VisitHelper {
     [](Leaf::Basic const& basic) { return leaf_basic_to_types (basic); },
-    [](VT::Array const&) { return array_to_types (); },
-    [](VF::AtVariantType const&) { return gvariant_types_v (); },
+    [](VT::Array const& array) { return format_array_to_types (array.element_type); },
+    [](VF::AtVariantType const& avt) { return gvariant_types_v (avt.type); },
     [](VF::Pointer const&) { return pointer_to_types (); },
     [](VF::Convenience const& convenience) { return convenience_to_types (convenience); },
     [](VF::Maybe const& maybe) { return maybe_to_types (maybe); },

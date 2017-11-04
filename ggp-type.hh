@@ -29,31 +29,62 @@
 namespace Ggp
 {
 
+enum class Signedness : std::uint8_t
+{
+  Signed,
+  Unsigned,
+  Any,
+};
+
+struct Integral
+{
+  std::vector<std::string> names;
+  std::vector<std::string> accidental_names;
+  std::uint8_t size_in_bytes;
+  Signedness signedness;
+};
+
+struct Real
+{
+  std::vector<std::string> names;
+  std::uint8_t size_in_bits;
+};
+
+struct VariantTypeUnspecified
+{};
+
+using TypeInfo = std::variant
+  <
+  VariantTypeUnspecified,
+  VariantType
+  >;
+
+struct VariantTyped
+{
+  std::string name;
+  TypeInfo info;
+};
+
 struct Pointer;
 
-// TODO: This probably won't be enough. We will another variant like:
-//
-// std::variant<Integral, Real, VariantTyped>
-//
-// Integral could store a size in bits, signedness and probably a list
-// of names from most expected to least expected.
-//
-// Real would be similar, but for floating point variables.
-//
-// VariantTyped probably can hold some extra data about GVariant,
-// GVariantBuilder or GVariantIter
-using TypeName = std::string;
+using PlainType = std::variant
+  <
+  Integral,
+  Real,
+  VariantTyped
+  >;
 
-using Const = std::variant<Util::Value<Pointer>, TypeName>;
+using Const = std::variant<Util::Value<Pointer>, PlainType>;
 
 struct Pointer
 {
-  std::variant<Util::Value<Pointer>, Const, TypeName> type;
+  std::variant<Util::Value<Pointer>, Const, PlainType> type;
 };
 
-// TODO: Add NullablePointer for maybes and some arrays
+struct NullablePointer : Pointer
+{};
 
-using Type = std::variant<Const, Pointer, TypeName>;
+using Type = std::variant<Pointer, NullablePointer, PlainType>;
 
 struct Types
 {

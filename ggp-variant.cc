@@ -226,6 +226,68 @@ parse_variant_type_string (std::string_view const& string)
 namespace
 {
 
+bool
+basic_is_definite (Leaf::Basic const& basic)
+{
+  auto v {Util::VisitHelper {
+    [](Leaf::AnyBasic const&) { return false; },
+    [](auto const&) { return true; },
+  }};
+  return std::visit (v, basic);
+}
+
+bool
+maybe_is_definite (VT::Maybe const& maybe)
+{
+  return variant_type_is_definite (maybe.pointed_type);
+}
+
+bool
+tuple_is_definite (VT::Tuple const& tuple)
+{
+  for (auto const& type : tuple.types)
+  {
+    if (!variant_type_is_definite (type))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool
+array_is_definite (VT::Array const& array)
+{
+  return variant_type_is_definite (array.element_type);
+}
+
+bool
+entry_is_definite (VT::Entry const& entry)
+{
+  return basic_is_definite (entry.key) && variant_type_is_definite (entry.value);
+}
+
+} // anonymous namespace
+
+bool
+variant_type_is_definite (VariantType const& vt)
+{
+  auto v {Util::VisitHelper {
+    [](Leaf::Basic const& basic) { return basic_is_definite (basic); },
+    [](VT::Maybe const& maybe) { return maybe_is_definite (maybe); },
+    [](VT::Tuple const& tuple) { return tuple_is_definite (tuple); },
+    [](VT::Array const& array) { return array_is_definite (array); },
+    [](VT::Entry const& entry) { return entry_is_definite (entry); },
+    [](Leaf::Variant const&) { return true; },
+    [](Leaf::AnyTuple const&) { return false; },
+    [](Leaf::AnyType const&) { return false; },
+  }};
+  return std::visit (v, vt);
+}
+
+namespace
+{
+
 using ParsePointerFormatResult = ParseResult<VF::Pointer>;
 
 std::optional<ParsePointerFormatResult>

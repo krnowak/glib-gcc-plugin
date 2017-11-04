@@ -122,6 +122,9 @@ struct Entry
 std::optional<VariantType>
 parse_variant_type_string (std::string_view const& string);
 
+bool
+variant_type_is_definite (VariantType const& vt);
+
 // variant format
 namespace VF
 {
