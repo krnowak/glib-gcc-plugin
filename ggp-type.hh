@@ -38,7 +38,8 @@ enum class Signedness : std::uint8_t
 
 struct Integral
 {
-  std::vector<std::string> names;
+  std::string name;
+  std::vector<std::string> additional_names;
   std::vector<std::string> accidental_names;
   std::uint8_t size_in_bytes;
   Signedness signedness;
@@ -46,18 +47,24 @@ struct Integral
 
 struct Real
 {
-  std::vector<std::string> names;
-  std::uint8_t size_in_bits;
+  std::string name;
+  std::vector<std::string> additional_names;
+  std::uint8_t size_in_bytes;
 };
 
 struct VariantTypeUnspecified
 {};
 
-using TypeInfo = std::variant
-  <
-  VariantTypeUnspecified,
-  VariantType
-  >;
+struct TypeInfo
+{
+  using V = std::variant
+    <
+    VariantTypeUnspecified,
+    VariantType
+    >;
+
+  V v;
+};
 
 struct VariantTyped
 {
@@ -66,25 +73,53 @@ struct VariantTyped
 };
 
 struct Pointer;
+struct PlainType
+{
+  using V = std::variant
+    <
+    Integral,
+    Real,
+    VariantTyped
+    >;
 
-using PlainType = std::variant
-  <
-  Integral,
-  Real,
-  VariantTyped
-  >;
+  V v;
+};
 
-using Const = std::variant<Util::Value<Pointer>, PlainType>;
+struct Const
+{
+  using V = std::variant<Util::Value<Pointer>, PlainType>;
+
+  V v;
+};
 
 struct Pointer
 {
-  std::variant<Util::Value<Pointer>, Const, PlainType> type;
+  using V = std::variant<Util::Value<Pointer>, Const, PlainType>;
+
+  V v;
 };
 
 struct NullablePointer : Pointer
 {};
 
-using Type = std::variant<Pointer, NullablePointer, PlainType>;
+// For types we don't support (restrict, volatile, _Atomic qualifiers,
+// function types, etc…)
+struct Meh
+{};
+
+struct Type
+{
+  using V = std::variant
+    <
+    Const,
+    Pointer,
+    NullablePointer,
+    PlainType,
+    Meh
+    >;
+
+  V v;
+};
 
 struct Types
 {
@@ -94,6 +129,9 @@ struct Types
 
 std::vector<Types>
 expected_types_for_format (VariantFormat const& format);
+
+bool
+type_is_convertible_to_type (Type const& from, Type const& to);
 
 } // namespace Ggp
 

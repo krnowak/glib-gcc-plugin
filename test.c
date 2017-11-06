@@ -26,6 +26,7 @@ bar (void)
 {
   double d;
   guchar c = 13;
+  const gchar *foo = NULL;
   variant_set (33, "(iy)", 42, c);
-  extern_variant_get (1, "(dms)", &d, NULL);
+  extern_variant_get (1, "(dms&s)", &d, NULL, &foo);
 }
