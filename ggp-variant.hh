@@ -25,6 +25,8 @@
 #include <string_view>
 #include <variant>
 
+// TODO: Put variants in structs. Like in ggp-type.hh.
+
 namespace Ggp
 {
 

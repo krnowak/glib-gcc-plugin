@@ -429,7 +429,6 @@ check_real (Real const& from,
     {
       return false;
     }
-    // TODO: check accidental names
   }
   if (from.size_in_bytes != to.size_in_bytes)
   {
