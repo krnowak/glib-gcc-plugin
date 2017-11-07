@@ -52,7 +52,9 @@ struct ObjectPath {}; // o
 struct Signature {}; // g
 struct AnyBasic {}; // ?
 
-using Basic = std::variant
+struct Basic
+{
+  using V = std::variant
   <
   Leaf::Bool,
   Leaf::Byte,
@@ -70,30 +72,12 @@ using Basic = std::variant
   Leaf::AnyBasic
   >;
 
+  V v;
+};
+
 } // namespace Leaf
 
-// variant type
-namespace VT
-{
-
-struct Array; // a
-struct Maybe; // m
-struct Tuple; // ()
-struct Entry; // {}
-
-} // namespace VT
-
-using VariantType = std::variant
-  <
-  Leaf::Basic,
-  VT::Maybe,
-  VT::Tuple,
-  VT::Array,
-  VT::Entry,
-  Leaf::Variant,
-  Leaf::AnyTuple,
-  Leaf::AnyType
-  >;
+struct VariantType;
 
 namespace VT
 {
@@ -121,17 +105,38 @@ struct Entry
 
 } // namespace VT
 
+struct VariantType
+{
+  using V = std::variant
+  <
+  Leaf::Basic,
+  VT::Maybe,
+  VT::Tuple,
+  VT::Array,
+  VT::Entry,
+  Leaf::Variant,
+  Leaf::AnyTuple,
+  Leaf::AnyType
+  >;
+
+  V v;
+};
+
 std::optional<VariantType>
 parse_variant_type_string (std::string_view const& string);
 
 bool
 variant_type_is_definite (VariantType const& vt);
 
+struct VariantFormat;
+
 // variant format
 namespace VF
 {
 
-using BasicMaybePointer = std::variant
+struct BasicMaybePointer
+{
+  using V = std::variant
   <
   Leaf::String,
   Leaf::ObjectPath,
@@ -139,7 +144,12 @@ using BasicMaybePointer = std::variant
   Leaf::AnyBasic
   >;
 
-using BasicMaybeBool = std::variant
+  V v;
+};
+
+struct BasicMaybeBool
+{
+  using V = std::variant
   <
   Leaf::Bool, // b
   Leaf::Byte, // y
@@ -153,65 +163,24 @@ using BasicMaybeBool = std::variant
   Leaf::Double // d
   >;
 
-struct AtBasicType;
-using Pointer = std::variant
+  V v;
+};
+
+struct AtBasicType
+{
+  Leaf::Basic basic;
+};
+
+struct Pointer
+{
+  using V = std::variant
   <
   Leaf::String,
   Leaf::ObjectPath,
   Leaf::Signature
   >;
 
-struct AtVariantType;
-struct Convenience;
-
-struct Tuple;
-struct Entry;
-struct Maybe;
-
-using BasicFormat = std::variant
-  <
-  Leaf::Basic,
-  AtBasicType,
-  Pointer
-  >;
-
-using MaybePointer = std::variant
-  <
-  VT::Array,
-  AtVariantType,
-  BasicMaybePointer,
-  Pointer,
-  Convenience
-  >;
-
-using MaybeBool = std::variant
-  <
-  BasicMaybeBool,
-  Entry,
-  Tuple,
-  Maybe
-  >;
-
-} // namespace VF
-
-using VariantFormat = std::variant
-  <
-  Leaf::Basic,
-  VT::Array,
-  VF::AtVariantType,
-  VF::Pointer,
-  VF::Convenience,
-  VF::Maybe,
-  VF::Tuple,
-  VF::Entry
-  >;
-
-namespace VF
-{
-
-struct AtBasicType
-{
-  Leaf::Basic basic;
+  V v;
 };
 
 struct AtVariantType
@@ -244,18 +213,77 @@ struct Tuple
   std::vector<VariantFormat> formats;
 };
 
+struct BasicFormat
+{
+  using V = std::variant
+  <
+  Leaf::Basic,
+  AtBasicType,
+  Pointer
+  >;
+
+  V v;
+};
+
 struct Entry
 {
   BasicFormat key;
   Util::Value<VariantFormat> value;
 };
 
+struct MaybePointer
+{
+  using V = std::variant
+  <
+  VT::Array,
+  AtVariantType,
+  BasicMaybePointer,
+  Pointer,
+  Convenience
+  >;
+
+  V v;
+};
+struct MaybeBool;
+
 struct Maybe
 {
-  std::variant<MaybePointer, Util::Value<MaybeBool>> kind;
+  using V = std::variant<MaybePointer, Util::Value<MaybeBool>>;
+
+  V v;
+};
+
+struct MaybeBool
+{
+  using V = std::variant
+  <
+  BasicMaybeBool,
+  Entry,
+  Tuple,
+  Maybe
+  >;
+
+  V v;
 };
 
 } // namespace VF
+
+struct VariantFormat
+{
+  using V = std::variant
+  <
+  Leaf::Basic,
+  VT::Array,
+  VF::AtVariantType,
+  VF::Pointer,
+  VF::Convenience,
+  VF::Maybe,
+  VF::Tuple,
+  VF::Entry
+  >;
+
+  V v;
+};
 
 std::optional<VariantFormat>
 parse_variant_format_string (std::string_view const& string);

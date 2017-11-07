@@ -146,9 +146,9 @@ leaf_basic_to_types (Leaf::Basic const& basic)
     [](Leaf::String const&) { return string_types (); },
     [](Leaf::ObjectPath const&) { return string_types (); },
     [](Leaf::Signature const&) { return string_types (); },
-    [](Leaf::AnyBasic const& any) { return gvariant_types_v (VariantType {Leaf::Basic {any}}); },
+    [](Leaf::AnyBasic const& any) { return gvariant_types_v (VariantType {{Leaf::Basic {{any}}}}); },
   }};
-  return std::visit (v, basic);
+  return std::visit (v, basic.v);
 }
 
 template <typename Ptr>
@@ -208,7 +208,7 @@ convenience_to_types (VF::Convenience const& convenience)
 std::vector<Types>
 basic_maybe_bool_to_types (VF::BasicMaybeBool const& bmb)
 {
-  return leaf_basic_to_types (Util::generalize<Leaf::Basic> (bmb));
+  return leaf_basic_to_types (Leaf::Basic {Util::generalize<Leaf::Basic::V> (bmb.v)});
 }
 
 std::vector<Types>
@@ -223,14 +223,14 @@ entry_to_types (VF::Entry const& entry);
 std::vector<Types>
 maybe_bool_to_types (VF::MaybeBool const& mb)
 {
-  auto types {leaf_basic_to_types (Leaf::Bool {})};
+  auto types {leaf_basic_to_types (Leaf::Basic {Leaf::Bool {}})};
   auto v {Util::VisitHelper {
     [](VF::BasicMaybeBool const& bmb) { return basic_maybe_bool_to_types (bmb); },
     [](VF::Entry const& entry) { return entry_to_types (entry); },
     [](VF::Tuple const& tuple) { return tuple_to_types (tuple); },
     [](VF::Maybe const& maybe) { return maybe_to_types (maybe); },
   }};
-  auto more_types {std::visit (v, mb)};
+  auto more_types {std::visit (v, mb.v)};
   std::move (more_types.begin (), more_types.end(), std::back_inserter (types));
   return types;
 }
@@ -243,9 +243,9 @@ basic_maybe_pointer_to_types (VF::BasicMaybePointer const& bmp)
     [](Leaf::String const&) { return std::vector {Types {{{const_str ()}}, {{Pointer {{str ()}}}}}}; },
     [](Leaf::ObjectPath const&) { return std::vector {Types {{{const_str ()}}, {{Pointer {{str ()}}}}}}; },
     [](Leaf::Signature const&) { return std::vector {Types {{{const_str ()}}, {{Pointer {{str ()}}}}}}; },
-    [](Leaf::AnyBasic const& any) { return gvariant_types_v (VariantType {Leaf::Basic {any}}); },
+    [](Leaf::AnyBasic const& any) { return gvariant_types_v (VariantType {{Leaf::Basic {{any}}}}); },
   }};
-  return std::visit (v, bmp);
+  return std::visit (v, bmp.v);
 }
 
 // TODO: we need to return NullablePointer here.
@@ -259,7 +259,7 @@ maybe_pointer_to_types (VF::MaybePointer const& mp)
     [](VF::Pointer const&) { return pointer_to_types (); },
     [](VF::Convenience const& convenience) { return convenience_to_types (convenience); },
   }};
-  return std::visit (v, mp);
+  return std::visit (v, mp.v);
 }
 
 std::vector<Types>
@@ -269,7 +269,7 @@ maybe_to_types (VF::Maybe const& maybe)
     [](VF::MaybePointer const& mp) { return maybe_pointer_to_types (mp); },
     [](VF::MaybeBool const& mb) { return maybe_bool_to_types (mb); },
   }};
-  return std::visit (v, maybe.kind);
+  return std::visit (v, maybe.v);
 }
 
 std::vector<Types>
@@ -292,10 +292,10 @@ basic_format_to_types (VF::BasicFormat const& bf)
 {
   auto v {Util::VisitHelper {
     [](Leaf::Basic const& basic) { return leaf_basic_to_types (basic); },
-    [](VF::AtBasicType const& abt) { return gvariant_types_v (VariantType {abt.basic}); },
+    [](VF::AtBasicType const& abt) { return gvariant_types_v (VariantType {{abt.basic}}); },
     [](VF::Pointer const&) { return pointer_to_types (); },
   }};
-  return std::visit (v, bf);
+  return std::visit (v, bf.v);
 }
 
 std::vector<Types>
@@ -331,7 +331,7 @@ format_to_types (VariantFormat const& format)
     [](VF::Tuple const& tuple) { return tuple_to_types (tuple); },
     [](VF::Entry const& entry) { return entry_to_types (entry); },
   }};
-  return std::visit (v, format);
+  return std::visit (v, format.v);
 }
 
 } // anonymous namespace
