@@ -21,8 +21,6 @@
 #include <algorithm>
 #include <iterator>
 
-// TODO: rename Util::VisitHelper variables from v to vh
-
 namespace Ggp
 {
 
@@ -231,11 +229,11 @@ namespace
 bool
 basic_is_definite (Leaf::Basic const& basic)
 {
-  auto v {Util::VisitHelper {
+  auto vh {Util::VisitHelper {
     [](Leaf::AnyBasic const&) { return false; },
     [](auto const&) { return true; },
   }};
-  return std::visit (v, basic.v);
+  return std::visit (vh, basic.v);
 }
 
 bool
@@ -274,7 +272,7 @@ entry_is_definite (VT::Entry const& entry)
 bool
 VariantType::is_definite () const
 {
-  auto v {Util::VisitHelper {
+  auto vh {Util::VisitHelper {
     [](Leaf::Basic const& basic) { return basic_is_definite (basic); },
     [](VT::Maybe const& maybe) { return maybe_is_definite (maybe); },
     [](VT::Tuple const& tuple) { return tuple_is_definite (tuple); },
@@ -284,7 +282,7 @@ VariantType::is_definite () const
     [](Leaf::AnyTuple const&) { return false; },
     [](Leaf::AnyType const&) { return false; },
   }};
-  return std::visit (v, this->v);
+  return std::visit (vh, this->v);
 }
 
 namespace
@@ -552,7 +550,7 @@ parse_maybe_format (std::string_view const& string)
       {
         return {};
       }
-      auto v {Util::VisitHelper {
+      auto vh {Util::VisitHelper {
         [](Leaf::String const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
         [](Leaf::ObjectPath const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
         [](Leaf::Signature const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
@@ -568,7 +566,7 @@ parse_maybe_format (std::string_view const& string)
         [](Leaf::Handle const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
         [](Leaf::Double const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
       }};
-      return {{std::visit (v, maybe_result->parsed.v), std::move (maybe_result->rest)}};
+      return {{std::visit (vh, maybe_result->parsed.v), std::move (maybe_result->rest)}};
     }
   }
 }
@@ -733,7 +731,7 @@ pointer_to_variant_type (VF::Pointer const& pointer)
 VariantType
 maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
 {
-  auto v {Util::VisitHelper {
+  auto vh {Util::VisitHelper {
     [](VT::Array const& array) { return VariantType {{array}}; },
     [](VF::AtVariantType const& avt) { return avt.type; },
     [](VF::BasicMaybePointer const& bmp) { return basic_maybe_pointer_to_variant_type (bmp); },
@@ -741,18 +739,18 @@ maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
     [](VF::Convenience const &convenience) { return convenience_to_variant_type (convenience); },
   }};
 
-  return {VT::Maybe {std::visit (v, mp.v)}};
+  return {VT::Maybe {std::visit (vh, mp.v)}};
 }
 
 Leaf::Basic
 basic_format_to_basic_type (VF::BasicFormat const& basic_format)
 {
-  auto v {Util::VisitHelper {
+  auto vh {Util::VisitHelper {
     [](Leaf::Basic const& basic) { return basic; },
     [](VF::AtBasicType const& at) { return at.basic; },
     [](VF::Pointer const& pointer) { return pointer_to_basic_type (pointer); },
   }};
-  return std::visit (v, basic_format.v);
+  return std::visit (vh, basic_format.v);
 }
 
 VariantType
@@ -781,23 +779,23 @@ maybe_to_variant_type (VF::Maybe const& maybe);
 VariantType
 maybe_bool_to_variant_type (VF::MaybeBool const& mb)
 {
-  auto v {Util::VisitHelper {
+  auto vh {Util::VisitHelper {
     [](VF::BasicMaybeBool const& bmb) { return basic_maybe_bool_to_variant_type (bmb); },
     [](VF::Entry const& entry) { return entry_to_variant_type (entry); },
     [](VF::Tuple const& tuple) { return tuple_to_variant_type (tuple); },
     [](VF::Maybe const& maybe) { return maybe_to_variant_type (maybe); },
   }};
-  return {VT::Maybe {std::visit (v, mb.v)}};
+  return {VT::Maybe {std::visit (vh, mb.v)}};
 }
 
 VariantType
 maybe_to_variant_type (VF::Maybe const& maybe)
 {
-  auto v {Util::VisitHelper {
+  auto vh {Util::VisitHelper {
     [](VF::MaybePointer const& mp) { return maybe_pointer_to_variant_type (mp); },
     [](VF::MaybeBool const& mb) { return maybe_bool_to_variant_type (mb); },
   }};
-  return std::visit (v, maybe.v);
+  return std::visit (vh, maybe.v);
 }
 
 } // anonymous namespace
@@ -805,7 +803,7 @@ maybe_to_variant_type (VF::Maybe const& maybe)
 VariantType
 VariantFormat::to_type () const
 {
-  auto v {Util::VisitHelper {
+  auto vh {Util::VisitHelper {
     [](Leaf::Basic const& basic) { return VariantType {{basic}}; },
     [](VT::Array const& array) { return VariantType {{array}}; },
     [](VF::AtVariantType const& avt) { return avt.type; },
@@ -815,7 +813,7 @@ VariantFormat::to_type () const
     [](VF::Tuple const& tuple) { return tuple_to_variant_type (tuple); },
     [](VF::Entry const& entry) { return entry_to_variant_type (entry); },
   }};
-  return std::visit (v, this->v);
+  return std::visit (vh, this->v);
 }
 
 } // namespace Ggp
