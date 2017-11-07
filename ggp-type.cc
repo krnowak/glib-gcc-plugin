@@ -18,6 +18,8 @@
 
 #include "ggp-type.hh"
 
+// TODO: rename Util::VisitHelper variables from v to vh
+
 namespace Ggp
 {
 
@@ -311,7 +313,7 @@ entry_to_types (VF::Entry const& entry)
 std::vector<Types>
 format_array_to_types (VariantType const& vt)
 {
-  if (variant_type_is_definite (vt))
+  if (vt.is_definite ())
   {
     return array_to_types<NullablePointer> (vt);
   }

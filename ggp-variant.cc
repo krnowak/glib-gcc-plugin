@@ -21,6 +21,8 @@
 #include <algorithm>
 #include <iterator>
 
+// TODO: rename Util::VisitHelper variables from v to vh
+
 namespace Ggp
 {
 
@@ -206,8 +208,8 @@ parse_single_type (std::string_view const& string)
 
 } // anonymous namespace
 
-std::optional<VariantType>
-parse_variant_type_string (std::string_view const& string)
+/* static */ std::optional<VariantType>
+VariantType::from_string (std::string_view const& string)
 {
   auto maybe_result {parse_single_type (string)};
 
@@ -239,7 +241,7 @@ basic_is_definite (Leaf::Basic const& basic)
 bool
 maybe_is_definite (VT::Maybe const& maybe)
 {
-  return variant_type_is_definite (maybe.pointed_type);
+  return maybe.pointed_type->is_definite ();
 }
 
 bool
@@ -247,7 +249,7 @@ tuple_is_definite (VT::Tuple const& tuple)
 {
   for (auto const& type : tuple.types)
   {
-    if (!variant_type_is_definite (type))
+    if (!type.is_definite ())
     {
       return false;
     }
@@ -258,19 +260,19 @@ tuple_is_definite (VT::Tuple const& tuple)
 bool
 array_is_definite (VT::Array const& array)
 {
-  return variant_type_is_definite (array.element_type);
+  return array.element_type->is_definite ();
 }
 
 bool
 entry_is_definite (VT::Entry const& entry)
 {
-  return basic_is_definite (entry.key) && variant_type_is_definite (entry.value);
+  return basic_is_definite (entry.key) && entry.value->is_definite ();
 }
 
 } // anonymous namespace
 
 bool
-variant_type_is_definite (VariantType const& vt)
+VariantType::is_definite () const
 {
   auto v {Util::VisitHelper {
     [](Leaf::Basic const& basic) { return basic_is_definite (basic); },
@@ -282,7 +284,7 @@ variant_type_is_definite (VariantType const& vt)
     [](Leaf::AnyTuple const&) { return false; },
     [](Leaf::AnyType const&) { return false; },
   }};
-  return std::visit (v, vt.v);
+  return std::visit (v, this->v);
 }
 
 namespace
@@ -665,8 +667,8 @@ parse_single_format (std::string_view const& string)
 
 } // anonymous namespace
 
-std::optional<VariantFormat>
-parse_variant_format_string (std::string_view const& string)
+/* static */ std::optional<VariantFormat>
+VariantFormat::from_string (std::string_view const& string)
 {
   auto maybe_result {parse_single_format (string)};
 
@@ -756,7 +758,7 @@ basic_format_to_basic_type (VF::BasicFormat const& basic_format)
 VariantType
 entry_to_variant_type (VF::Entry const& entry)
 {
-  return {{VT::Entry {basic_format_to_basic_type (entry.key), variant_format_to_type (entry.value)}}};
+  return {{VT::Entry {basic_format_to_basic_type (entry.key), entry.value->to_type ()}}};
 }
 
 VariantType
@@ -768,7 +770,7 @@ tuple_to_variant_type (VF::Tuple const& tuple)
                   std::back_inserter (types),
                   [](VariantFormat const& format)
                   {
-                    return variant_format_to_type (format);
+                    return format.to_type ();
                   });
   return {{VT::Tuple {std::move (types)}}};
 }
@@ -801,7 +803,7 @@ maybe_to_variant_type (VF::Maybe const& maybe)
 } // anonymous namespace
 
 VariantType
-variant_format_to_type (VariantFormat const& format)
+VariantFormat::to_type () const
 {
   auto v {Util::VisitHelper {
     [](Leaf::Basic const& basic) { return VariantType {{basic}}; },
@@ -813,7 +815,7 @@ variant_format_to_type (VariantFormat const& format)
     [](VF::Tuple const& tuple) { return tuple_to_variant_type (tuple); },
     [](VF::Entry const& entry) { return entry_to_variant_type (entry); },
   }};
-  return std::visit (v, format.v);
+  return std::visit (v, this->v);
 }
 
 } // namespace Ggp

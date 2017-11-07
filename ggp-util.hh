@@ -123,6 +123,18 @@ public:
     return *ptr;
   }
 
+  T*
+  operator-> () noexcept
+  {
+    return ptr.get ();
+  }
+
+  const T*
+  operator-> () const noexcept
+  {
+    return ptr.get ();
+  }
+
 private:
   std::unique_ptr<T> ptr;
 };

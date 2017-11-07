@@ -25,8 +25,6 @@
 #include <string_view>
 #include <variant>
 
-// TODO: Put variants in structs. Like in ggp-type.hh.
-
 namespace Ggp
 {
 
@@ -119,14 +117,14 @@ struct VariantType
   Leaf::AnyType
   >;
 
+  static std::optional<VariantType>
+  from_string (std::string_view const& string);
+
+  bool
+  is_definite() const;
+
   V v;
 };
-
-std::optional<VariantType>
-parse_variant_type_string (std::string_view const& string);
-
-bool
-variant_type_is_definite (VariantType const& vt);
 
 struct VariantFormat;
 
@@ -282,14 +280,14 @@ struct VariantFormat
   VF::Entry
   >;
 
+  static std::optional<VariantFormat>
+  from_string (std::string_view const& string);
+
+  VariantType
+  to_type () const;
+
   V v;
 };
-
-std::optional<VariantFormat>
-parse_variant_format_string (std::string_view const& string);
-
-VariantType
-variant_format_to_type (VariantFormat const& format);
 
 } // namespace Ggp
 
