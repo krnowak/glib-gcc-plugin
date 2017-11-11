@@ -18,6 +18,9 @@
 
 #include "ggp-vc.hh"
 
+#include "ggp-type.hh"
+#include "ggp-variant.hh"
+
 #include <optional>
 #include <queue>
 
@@ -309,8 +312,18 @@ ggp_vc_finish_parse_function (void* gcc_data,
       warning (0, "format is not a string literal");
       continue;
     }
-    // TODO: parse format, get a number of expected parameters and
-    // their types, compare to actual passed parameters.
+    auto mvf = VariantFormat::from_string (format);
+    if (!mvf)
+    {
+      warning (0, "invalid variant format");
+      continue;
+    }
+    auto types = expected_types_for_format (*mvf);
+    if (types.size() != format_arg_params.size())
+    {
+      warning (0, "expected %lu parameters, got %lu", types.size(), format_arg_params.size());
+    }
+    // TODO: compare types to actual passed parameters.
   }
 }
 

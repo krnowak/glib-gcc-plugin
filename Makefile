@@ -44,6 +44,9 @@ $(PLUGIN): $(GGP_SOURCES:.cc=.o)
 test: $(PLUGIN)
 	gcc -fplugin=./$(PLUGIN) -c test.c
 
+variant-test: ggp-variant.o variant-test.o
+	$(CXX) -o $@ $^
+
 clean:
 	rm -f $(GGP_SOURCES:.cc=.o) $(PLUGIN)
 

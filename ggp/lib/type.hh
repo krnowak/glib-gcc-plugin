@@ -16,17 +16,20 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GGP_TYPE_HH
-#define GGP_TYPE_HH
+/*< check: GGP_LIB_TYPE_HH_CHECK >*/
+/*< lib: util.hh >*/
+/*< lib: variant.hh >*/
+/*< stl: cstdint >*/
+/*< stl: string >*/
+/*< stl: variant >*/
+/*< stl: vector >*/
 
-#include "ggp-gcc.hh"
+#ifndef GGP_LIB_TYPE_HH
+#define GGP_LIB_TYPE_HH
 
-#include "ggp-util.hh"
-#include "ggp-variant.hh"
+#define GGP_LIB_TYPE_HH_CHECK_VALUE GGP_LIB_TYPE_HH_CHECK
 
-#include <variant>
-
-namespace Ggp
+namespace Ggp::Lib
 {
 
 enum class Signedness : std::uint8_t
@@ -87,14 +90,14 @@ struct PlainType
 
 struct Const
 {
-  using V = std::variant<Util::Value<Pointer>, PlainType>;
+  using V = std::variant<Value<Pointer>, PlainType>;
 
   V v;
 };
 
 struct Pointer
 {
-  using V = std::variant<Util::Value<Pointer>, Const, PlainType>;
+  using V = std::variant<Value<Pointer>, Const, PlainType>;
 
   V v;
 };
@@ -133,6 +136,12 @@ expected_types_for_format (VariantFormat const& format);
 bool
 type_is_convertible_to_type (Type const& from, Type const& to);
 
-} // namespace Ggp
+} // namespace Ggp::Lib
 
-#endif /* GGP_TYPE_HH */
+#else
+
+#if GGP_LIB_TYPE_HH_CHECK_VALUE != GGP_LIB_TYPE_HH_CHECK
+#error "This non standalone header file was included from two different wrappers."
+#endif
+
+#endif /* GGP_LIB_TYPE_HH */

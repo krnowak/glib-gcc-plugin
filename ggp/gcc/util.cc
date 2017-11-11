@@ -16,12 +16,12 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ggp-util.hh"
+#include "ggp/gcc/util.hh"
 
 namespace Ggp
 {
 
-namespace Util
+namespace Gcc
 {
 
 namespace
@@ -97,6 +97,6 @@ CallbackRegistration::~CallbackRegistration ()
   }
 }
 
-} // namespace Util
+} // namespace Gcc
 
 } // namespace Ggp

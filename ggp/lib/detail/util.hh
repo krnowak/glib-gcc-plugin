@@ -16,23 +16,17 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GGP_UTIL_DETAIL_HH
-#define GGP_UTIL_DETAIL_HH
+#ifndef GGP_LIB_DETAIL_UTIL_HH
+#define GGP_LIB_DETAIL_UTIL_HH
 
-#include "ggp-gcc.hh"
+#ifndef GGP_LIB_UTIL_HH
+#error "Do not include this file directly."
+#endif
 
-#include <type_traits>
-#include <variant>
+#define GGP_LIB_DETAIL_UTIL_STR_HELP_(x) #x
 
-namespace Ggp
+namespace Ggp::Lib::Detail
 {
-
-namespace Util
-{
-
-namespace Detail
-{
-
 
 template <typename A, typename B, typename... C>
 struct contains;
@@ -86,10 +80,6 @@ struct is_std_variant : is_std_variant_impl<std::decay_t<T>>
 template <typename T>
 inline constexpr bool is_std_variant_v = is_std_variant<T>::value;
 
-} // namespace Detail
+} // namespace Ggp::Lib::Detail
 
-} // namespace Util
-
-} // namespace Ggp
-
-#endif /* GGP_UTIL_DETAIL_HH */
+#endif /* GGP_LIB_DETAIL_UTIL_HH */

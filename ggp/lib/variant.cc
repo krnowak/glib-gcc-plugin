@@ -16,12 +16,11 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ggp-variant.hh"
+/*< lib: variant.hh >*/
+/*< stl: algorithm >*/
+/*< stl: iterator >*/
 
-#include <algorithm>
-#include <iterator>
-
-namespace Ggp
+namespace Ggp::Lib
 {
 
 namespace
@@ -229,7 +228,7 @@ namespace
 bool
 basic_is_definite (Leaf::Basic const& basic)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Leaf::AnyBasic const&) { return false; },
     [](auto const&) { return true; },
   }};
@@ -272,7 +271,7 @@ entry_is_definite (VT::Entry const& entry)
 bool
 VariantType::is_definite () const
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Leaf::Basic const& basic) { return basic_is_definite (basic); },
     [](VT::Maybe const& maybe) { return maybe_is_definite (maybe); },
     [](VT::Tuple const& tuple) { return tuple_is_definite (tuple); },
@@ -362,41 +361,41 @@ parse_convenience_format (std::string_view const& string)
   auto sub {string.substr (0, len)};
   if (sub == "a&ay")
   {
-    return {{{VF::Convenience::Type::ByteStringArray, VF::Convenience::Kind::Constant}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::ByteStringArray {}}}, {{VF::Convenience::Kind::Constant {}}}}, string.substr (len)}};
   }
 
   len = 3;
   sub = string.substr (0, len);
   if (sub == "aay")
   {
-    return {{{VF::Convenience::Type::ByteStringArray, VF::Convenience::Kind::Duplicated}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::ByteStringArray {}}}, {{VF::Convenience::Kind::Duplicated {}}}}, string.substr (len)}};
   }
   if (sub == "&ay")
   {
-    return {{{VF::Convenience::Type::ByteString, VF::Convenience::Kind::Constant}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::ByteString {}}}, {{VF::Convenience::Kind::Constant {}}}}, string.substr (len)}};
   }
   if (sub == "a&o")
   {
-    return {{{VF::Convenience::Type::ObjectPathArray, VF::Convenience::Kind::Constant}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::ObjectPathArray {}}}, {{VF::Convenience::Kind::Constant {}}}}, string.substr (len)}};
   }
   if (sub == "a&s")
   {
-    return {{{VF::Convenience::Type::StringArray, VF::Convenience::Kind::Constant}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::StringArray {}}}, {{VF::Convenience::Kind::Constant {}}}}, string.substr (len)}};
   }
 
   len = 2;
   sub = string.substr (0, len);
   if (sub == "as")
   {
-    return {{{VF::Convenience::Type::StringArray, VF::Convenience::Kind::Duplicated}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::StringArray {}}}, {{VF::Convenience::Kind::Duplicated {}}}}, string.substr (len)}};
   }
   if (sub == "ao")
   {
-    return {{{VF::Convenience::Type::ObjectPathArray, VF::Convenience::Kind::Duplicated}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::ObjectPathArray {}}}, {{VF::Convenience::Kind::Duplicated {}}}}, string.substr (len)}};
   }
   if (sub == "ay")
   {
-    return {{{VF::Convenience::Type::ByteString, VF::Convenience::Kind::Duplicated}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::ByteString {}}}, {{VF::Convenience::Kind::Duplicated {}}}}, string.substr (len)}};
   }
   return {};
 }
@@ -550,7 +549,7 @@ parse_maybe_format (std::string_view const& string)
       {
         return {};
       }
-      auto vh {Util::VisitHelper {
+      auto vh {VisitHelper {
         [](Leaf::String const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
         [](Leaf::ObjectPath const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
         [](Leaf::Signature const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
@@ -688,38 +687,31 @@ namespace
 VariantType
 basic_maybe_pointer_to_variant_type (VF::BasicMaybePointer const& bmp)
 {
-  return {{Leaf::Basic {Util::generalize<Leaf::Basic::V> (bmp.v)}}};
+  return {{Leaf::Basic {generalize<Leaf::Basic::V> (bmp.v)}}};
 }
 
 VariantType
 basic_maybe_bool_to_variant_type (VF::BasicMaybeBool const& bmb)
 {
-  return {{Leaf::Basic {Util::generalize<Leaf::Basic::V> (bmb.v)}}};
+  return {{Leaf::Basic {generalize<Leaf::Basic::V> (bmb.v)}}};
 }
 
 Leaf::Basic
 pointer_to_basic_type (VF::Pointer pointer)
 {
-  return {Util::generalize<Leaf::Basic::V> (pointer.v)};
+  return {generalize<Leaf::Basic::V> (pointer.v)};
 }
 
 VariantType
 convenience_to_variant_type (VF::Convenience const& convenience)
 {
-  switch (convenience.type)
-  {
-  case VF::Convenience::Type::StringArray:
-    return {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::String {}}}}}}}}};
-  case VF::Convenience::Type::ObjectPathArray:
-    return {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::ObjectPath {}}}}}}}}};
-  case VF::Convenience::Type::ByteString:
-    return {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::Byte {}}}}}}}}};
-  case VF::Convenience::Type::ByteStringArray:
-    return {{VT::Array {{VariantType {{VT::Array {{VariantType {{Leaf::Basic {Leaf::Byte {}}}}}}}}}}}};
-  default:
-    gcc_unreachable();
-    return {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::String {}}}}}}}}};
-  }
+  auto vh {VisitHelper {
+    [](VF::Convenience::Type::StringArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::String {}}}}}}}}}; },
+    [](VF::Convenience::Type::ObjectPathArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::ObjectPath {}}}}}}}}}; },
+    [](VF::Convenience::Type::ByteString const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::Byte {}}}}}}}}}; },
+    [](VF::Convenience::Type::ByteStringArray const&) { return VariantType {{VT::Array {{VariantType {{VT::Array {{VariantType {{Leaf::Basic {Leaf::Byte {}}}}}}}}}}}}; },
+  }};
+  return std::visit (vh, convenience.type.v);
 }
 
 VariantType
@@ -731,12 +723,12 @@ pointer_to_variant_type (VF::Pointer const& pointer)
 VariantType
 maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](VT::Array const& array) { return VariantType {{array}}; },
     [](VF::AtVariantType const& avt) { return avt.type; },
     [](VF::BasicMaybePointer const& bmp) { return basic_maybe_pointer_to_variant_type (bmp); },
     [](VF::Pointer const& pointer) { return pointer_to_variant_type (pointer); },
-    [](VF::Convenience const &convenience) { return convenience_to_variant_type (convenience); },
+    [](VF::Convenience const& convenience) { return convenience_to_variant_type (convenience); },
   }};
 
   return {VT::Maybe {std::visit (vh, mp.v)}};
@@ -745,7 +737,7 @@ maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
 Leaf::Basic
 basic_format_to_basic_type (VF::BasicFormat const& basic_format)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Leaf::Basic const& basic) { return basic; },
     [](VF::AtBasicType const& at) { return at.basic; },
     [](VF::Pointer const& pointer) { return pointer_to_basic_type (pointer); },
@@ -779,7 +771,7 @@ maybe_to_variant_type (VF::Maybe const& maybe);
 VariantType
 maybe_bool_to_variant_type (VF::MaybeBool const& mb)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](VF::BasicMaybeBool const& bmb) { return basic_maybe_bool_to_variant_type (bmb); },
     [](VF::Entry const& entry) { return entry_to_variant_type (entry); },
     [](VF::Tuple const& tuple) { return tuple_to_variant_type (tuple); },
@@ -791,7 +783,7 @@ maybe_bool_to_variant_type (VF::MaybeBool const& mb)
 VariantType
 maybe_to_variant_type (VF::Maybe const& maybe)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](VF::MaybePointer const& mp) { return maybe_pointer_to_variant_type (mp); },
     [](VF::MaybeBool const& mb) { return maybe_bool_to_variant_type (mb); },
   }};
@@ -803,11 +795,11 @@ maybe_to_variant_type (VF::Maybe const& maybe)
 VariantType
 VariantFormat::to_type () const
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Leaf::Basic const& basic) { return VariantType {{basic}}; },
     [](VT::Array const& array) { return VariantType {{array}}; },
     [](VF::AtVariantType const& avt) { return avt.type; },
-    [](VF::Pointer pointer) { return pointer_to_variant_type (pointer); },
+    [](VF::Pointer const &pointer) { return pointer_to_variant_type (pointer); },
     [](VF::Convenience const& convenience) { return convenience_to_variant_type (convenience); },
     [](VF::Maybe const& maybe) { return maybe_to_variant_type (maybe); },
     [](VF::Tuple const& tuple) { return tuple_to_variant_type (tuple); },
@@ -816,4 +808,4 @@ VariantFormat::to_type () const
   return std::visit (vh, this->v);
 }
 
-} // namespace Ggp
+} // namespace Ggp::Lib

@@ -1,6 +1,7 @@
 typedef int gint;
 typedef gint gboolean;
 typedef unsigned char guchar;
+typedef char gchar;
 
 #define NULL ((void *) 0)
 
@@ -29,4 +30,26 @@ bar (void)
   const gchar *foo = NULL;
   variant_set (33, "(iy)", 42, c);
   extern_variant_get (1, "(dms&s)", &d, NULL, &foo);
+}
+
+static int
+test (int i)
+{
+  if (i > 3)
+    {
+      int i2 = i + 3;
+      return i2;
+    }
+  else
+    {
+      int i3 = i - 5;
+      return i3;
+    }
+}
+
+static int
+test2 (int i)
+{
+  int i2 = (i > 3) ? (i + 3) : (i - 5);
+  return i2;
 }

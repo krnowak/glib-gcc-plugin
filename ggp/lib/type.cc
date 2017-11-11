@@ -16,9 +16,11 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ggp-type.hh"
+/*< lib: type.hh >*/
+/*< stl: algorithm >*/
+/*< sizeof: int >*/
 
-namespace Ggp
+namespace Ggp::Lib
 {
 
 namespace
@@ -132,7 +134,7 @@ string_types ()
 std::vector<Types>
 leaf_basic_to_types (Leaf::Basic const& basic)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Leaf::Bool const&) { return types (gboolean_type ()); },
     [](Leaf::Byte const&) { return types (guchar_type ()); },
     [](Leaf::I16 const&) { return types (gint16_type ()); },
@@ -165,50 +167,45 @@ pointer_to_types ()
 }
 
 std::vector<Types>
+char_array_array_to_types (VF::Convenience::Kind const& convenience_kind)
+{
+  auto for_new {Type {{Pointer {{Const {{const_str ()}}}}}}};
+  auto vh {VisitHelper {
+    [](VF::Convenience::Kind::Constant const&) { return Type {{Pointer {{Pointer {{const_str ()}}}}}}; },
+    [](VF::Convenience::Kind::Duplicated const&) { return Type {{Pointer {{Pointer {{str ()}}}}}}; },
+  }};
+
+  return {{for_new, std::visit (vh, convenience_kind.v)}};
+}
+
+std::vector<Types>
+byte_string_to_types (VF::Convenience::Kind const& convenience_kind)
+{
+  auto for_new {Type {{const_str ()}}};
+  auto vh {VisitHelper {
+    [](VF::Convenience::Kind::Constant const&) { return Type {{Pointer {{const_str ()}}}}; },
+    [](VF::Convenience::Kind::Duplicated const&) { return Type {{Pointer {{str ()}}}}; },
+  }};
+
+  return {{for_new, std::visit (vh, convenience_kind.v)}};
+}
+
+std::vector<Types>
 convenience_to_types (VF::Convenience const& convenience)
 {
-  switch (convenience.type)
-  {
-  case VF::Convenience::Type::StringArray:
-  case VF::Convenience::Type::ObjectPathArray:
-  case VF::Convenience::Type::ByteStringArray:
-    {
-      auto for_new {Type {{Pointer {{Const {{const_str ()}}}}}}};
-      switch (convenience.kind)
-      {
-      case VF::Convenience::Kind::Constant:
-        return {{for_new, {{Pointer {{Pointer {{const_str ()}}}}}}}};
-      case VF::Convenience::Kind::Duplicated:
-        return {{for_new, {{Pointer {{Pointer {{str ()}}}}}}}};
-      default:
-        gcc_unreachable ();
-        return {};
-      }
-    }
-  case VF::Convenience::Type::ByteString:
-    {
-      auto for_new {Type {{const_str ()}}};
-      switch (convenience.kind)
-      {
-      case VF::Convenience::Kind::Constant:
-        return {{for_new, {{Pointer {{const_str ()}}}}}};
-      case VF::Convenience::Kind::Duplicated:
-        return {{for_new, {{Pointer {{str ()}}}}}};
-      default:
-        gcc_unreachable ();
-        return {};
-      }
-    }
-  default:
-    gcc_unreachable ();
-    return {};
-  }
+  auto vh {VisitHelper {
+    [&convenience](VF::Convenience::Type::StringArray const&) { return char_array_array_to_types (convenience.kind); },
+    [&convenience](VF::Convenience::Type::ObjectPathArray const&) { return char_array_array_to_types (convenience.kind); },
+    [&convenience](VF::Convenience::Type::ByteStringArray const&) { return char_array_array_to_types (convenience.kind); },
+    [&convenience](VF::Convenience::Type::ByteString const&) { return byte_string_to_types (convenience.kind); },
+  }};
+  return std::visit (vh, convenience.type.v);
 }
 
 std::vector<Types>
 basic_maybe_bool_to_types (VF::BasicMaybeBool const& bmb)
 {
-  return leaf_basic_to_types (Leaf::Basic {Util::generalize<Leaf::Basic::V> (bmb.v)});
+  return leaf_basic_to_types (Leaf::Basic {generalize<Leaf::Basic::V> (bmb.v)});
 }
 
 std::vector<Types>
@@ -224,7 +221,7 @@ std::vector<Types>
 maybe_bool_to_types (VF::MaybeBool const& mb)
 {
   auto types {leaf_basic_to_types (Leaf::Basic {Leaf::Bool {}})};
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](VF::BasicMaybeBool const& bmb) { return basic_maybe_bool_to_types (bmb); },
     [](VF::Entry const& entry) { return entry_to_types (entry); },
     [](VF::Tuple const& tuple) { return tuple_to_types (tuple); },
@@ -239,7 +236,7 @@ maybe_bool_to_types (VF::MaybeBool const& mb)
 std::vector<Types>
 basic_maybe_pointer_to_types (VF::BasicMaybePointer const& bmp)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Leaf::String const&) { return std::vector {Types {{{const_str ()}}, {{Pointer {{str ()}}}}}}; },
     [](Leaf::ObjectPath const&) { return std::vector {Types {{{const_str ()}}, {{Pointer {{str ()}}}}}}; },
     [](Leaf::Signature const&) { return std::vector {Types {{{const_str ()}}, {{Pointer {{str ()}}}}}}; },
@@ -252,7 +249,7 @@ basic_maybe_pointer_to_types (VF::BasicMaybePointer const& bmp)
 std::vector<Types>
 maybe_pointer_to_types (VF::MaybePointer const& mp)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](VT::Array const& array) { return array_to_types<NullablePointer> (array.element_type); },
     [](VF::AtVariantType const& avt) { return gvariant_types_v (avt.type); },
     [](VF::BasicMaybePointer const& bmb) { return basic_maybe_pointer_to_types (bmb); },
@@ -265,7 +262,7 @@ maybe_pointer_to_types (VF::MaybePointer const& mp)
 std::vector<Types>
 maybe_to_types (VF::Maybe const& maybe)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](VF::MaybePointer const& mp) { return maybe_pointer_to_types (mp); },
     [](VF::MaybeBool const& mb) { return maybe_bool_to_types (mb); },
   }};
@@ -290,7 +287,7 @@ tuple_to_types (VF::Tuple const& tuple)
 std::vector<Types>
 basic_format_to_types (VF::BasicFormat const& bf)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Leaf::Basic const& basic) { return leaf_basic_to_types (basic); },
     [](VF::AtBasicType const& abt) { return gvariant_types_v (VariantType {{abt.basic}}); },
     [](VF::Pointer const&) { return pointer_to_types (); },
@@ -321,7 +318,7 @@ format_array_to_types (VariantType const& vt)
 std::vector<Types>
 format_to_types (VariantFormat const& format)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Leaf::Basic const& basic) { return leaf_basic_to_types (basic); },
     [](VT::Array const& array) { return format_array_to_types (array.element_type); },
     [](VF::AtVariantType const& avt) { return gvariant_types_v (avt.type); },
@@ -374,8 +371,8 @@ template <typename TargetType = SimpleType,
 TargetType
 repackage (SubSet const& te)
 {
-  // TODO: use Util::generalize instead?
-  auto vh {Util::VisitHelper {
+  // TODO: use generalize instead?
+  auto vh {VisitHelper {
     [](auto const& inner) { return TargetType {{inner}}; },
   }};
   return std::visit (vh, te.v);
@@ -384,7 +381,7 @@ repackage (SubSet const& te)
 StrippedType
 strip_qualifiers (Type const& type)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Const const& cnst) { return repackage<StrippedType> (cnst); },
     [](Pointer const& other) { return StrippedType {{other}}; },
     [](NullablePointer const& other) { return StrippedType {{repackage<Pointer> (other)}}; },
@@ -453,7 +450,7 @@ bool
 check_plain_type (PlainType const& pt_from,
                   PlainType const& pt_to)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Integral const& i_from,
        Integral const& i_to) { return check_integral (i_from, i_to); },
     [](Real const& r_from,
@@ -470,7 +467,7 @@ bool
 check_simple_type (SimpleType const& from,
                    SimpleType const& to)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Const const& cnst_from,
        Const const& cnst_to) { return check_simple_type (repackage (cnst_from),
                                                          repackage (cnst_to)); },
@@ -486,9 +483,10 @@ check_simple_type (SimpleType const& from,
 }
 
 bool
-first_pointer (Pointer const& ptr_from, Pointer const& ptr_to)
+first_pointer (Pointer const& ptr_from,
+               Pointer const& ptr_to)
 {
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Const const& cnst_from,
        Const const& cnst_to) { return check_simple_type (repackage (cnst_from),
                                                          repackage (cnst_to)); },
@@ -507,11 +505,12 @@ first_pointer (Pointer const& ptr_from, Pointer const& ptr_to)
 } // anonymous namespace
 
 bool
-type_is_convertible_to_type (Type const& from, Type const& to)
+type_is_convertible_to_type (Type const& from,
+                             Type const& to)
 {
   auto stripped_from {strip_qualifiers (from)};
   auto stripped_to {strip_qualifiers (to)};
-  auto vh {Util::VisitHelper {
+  auto vh {VisitHelper {
     [](Pointer const& ptr_from,
        Pointer const& ptr_to) { return first_pointer (ptr_from, ptr_to); },
     [](PlainType const& pt_from,
@@ -522,4 +521,4 @@ type_is_convertible_to_type (Type const& from, Type const& to)
   return std::visit (vh, stripped_from.v, stripped_to.v);
 }
 
-} // namespace Ggp
+} // namespace Ggp::Lib
