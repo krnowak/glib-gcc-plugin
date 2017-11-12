@@ -47,33 +47,33 @@ parse_leaf_basic (std::string_view const& string)
   switch (string.front ())
   {
   case 'b':
-    return {{{Leaf::Bool {}}, rest}};
+    return {{{Leaf::bool_}, rest}};
   case 'y':
-    return {{{Leaf::Byte {}}, rest}};
+    return {{{Leaf::byte_}, rest}};
   case 'n':
-    return {{{Leaf::I16 {}}, rest}};
+    return {{{Leaf::i16}, rest}};
   case 'q':
-    return {{{Leaf::U16 {}}, rest}};
+    return {{{Leaf::u16}, rest}};
   case 'i':
-    return {{{Leaf::I32 {}}, rest}};
+    return {{{Leaf::i32}, rest}};
   case 'u':
-    return {{{Leaf::U32 {}}, rest}};
+    return {{{Leaf::u32}, rest}};
   case 'x':
-    return {{{Leaf::I64 {}}, rest}};
+    return {{{Leaf::i64}, rest}};
   case 't':
-    return {{{Leaf::U64 {}}, rest}};
+    return {{{Leaf::u64}, rest}};
   case 'h':
-    return {{{Leaf::Handle {}}, rest}};
+    return {{{Leaf::handle}, rest}};
   case 'd':
-    return {{{Leaf::Double {}}, rest}};
+    return {{{Leaf::double_}, rest}};
   case 's':
-    return {{{Leaf::String {}}, rest}};
+    return {{{Leaf::string_}, rest}};
   case 'o':
-    return {{{Leaf::ObjectPath {}}, rest}};
+    return {{{Leaf::object_path}, rest}};
   case 'g':
-    return {{{Leaf::Signature {}}, rest}};
+    return {{{Leaf::signature}, rest}};
   case '?':
-    return {{{Leaf::AnyBasic {}}, rest}};
+    return {{{Leaf::any_basic}, rest}};
   default:
     return {};
   }
@@ -184,11 +184,11 @@ parse_single_type (std::string_view const& string)
       return {{{{VT::Array {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
     }
   case '*':
-    return {{{{Leaf::AnyType {}}}, std::move (rest)}};
+    return {{{{Leaf::any_type}}, std::move (rest)}};
   case 'r':
-    return {{{{Leaf::AnyTuple {}}}, std::move (rest)}};
+    return {{{{Leaf::any_tuple}}, std::move (rest)}};
   case 'v':
-    return {{{{Leaf::Variant {}}}, std::move (rest)}};
+    return {{{{Leaf::variant}}, std::move (rest)}};
   default:
     {
       auto maybe_result {parse_leaf_basic (string)};
@@ -300,11 +300,11 @@ parse_pointer_format (std::string_view const& string)
   switch (string.front ())
   {
   case 's':
-    return {{{{Leaf::String {}}}, std::move (rest)}};
+    return {{{{Leaf::string_}}, std::move (rest)}};
   case 'o':
-    return {{{{Leaf::ObjectPath {}}}, std::move (rest)}};
+    return {{{{Leaf::object_path}}, std::move (rest)}};
   case 'g':
-    return {{{{Leaf::Signature {}}}, std::move (rest)}};
+    return {{{{Leaf::signature}}, std::move (rest)}};
   default:
     return {};
   }
@@ -361,41 +361,41 @@ parse_convenience_format (std::string_view const& string)
   auto sub {string.substr (0, len)};
   if (sub == "a&ay")
   {
-    return {{{{{VF::Convenience::Type::ByteStringArray {}}}, {{VF::Convenience::Kind::Constant {}}}}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::constant}}}, string.substr (len)}};
   }
 
   len = 3;
   sub = string.substr (0, len);
   if (sub == "aay")
   {
-    return {{{{{VF::Convenience::Type::ByteStringArray {}}}, {{VF::Convenience::Kind::Duplicated {}}}}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::duplicated}}}, string.substr (len)}};
   }
   if (sub == "&ay")
   {
-    return {{{{{VF::Convenience::Type::ByteString {}}}, {{VF::Convenience::Kind::Constant {}}}}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::constant}}}, string.substr (len)}};
   }
   if (sub == "a&o")
   {
-    return {{{{{VF::Convenience::Type::ObjectPathArray {}}}, {{VF::Convenience::Kind::Constant {}}}}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::constant}}}, string.substr (len)}};
   }
   if (sub == "a&s")
   {
-    return {{{{{VF::Convenience::Type::StringArray {}}}, {{VF::Convenience::Kind::Constant {}}}}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::constant}}}, string.substr (len)}};
   }
 
   len = 2;
   sub = string.substr (0, len);
   if (sub == "as")
   {
-    return {{{{{VF::Convenience::Type::StringArray {}}}, {{VF::Convenience::Kind::Duplicated {}}}}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::duplicated}}}, string.substr (len)}};
   }
   if (sub == "ao")
   {
-    return {{{{{VF::Convenience::Type::ObjectPathArray {}}}, {{VF::Convenience::Kind::Duplicated {}}}}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::duplicated}}}, string.substr (len)}};
   }
   if (sub == "ay")
   {
-    return {{{{{VF::Convenience::Type::ByteString {}}}, {{VF::Convenience::Kind::Duplicated {}}}}, string.substr (len)}};
+    return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::duplicated}}}, string.substr (len)}};
   }
   return {};
 }
@@ -490,11 +490,11 @@ parse_maybe_format (std::string_view const& string)
       return {{{{VF::MaybePointer {{VF::AtVariantType {std::move (maybe_result->parsed)}}}}}, std::move (maybe_result->rest)}};
     }
   case 'v':
-    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::Variant {}}}}}}}, std::move (rest)}};
+    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::variant}}}}}}, std::move (rest)}};
   case '*':
-    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::AnyType {}}}}}}}, std::move (rest)}};
+    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_type}}}}}}, std::move (rest)}};
   case 'r':
-    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::AnyTuple {}}}}}}}, std::move (rest)}};
+    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_tuple}}}}}}, std::move (rest)}};
   case '&':
     {
       auto maybe_result {parse_pointer_format (rest)};
@@ -600,11 +600,11 @@ parse_single_format (std::string_view const& string)
       return {{{VF::AtVariantType {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
     }
   case 'v':
-    return {{{VF::AtVariantType {Leaf::Variant {}}}, std::move (rest)}};
+    return {{{VF::AtVariantType {Leaf::variant}}, std::move (rest)}};
   case 'r':
-    return {{{VF::AtVariantType {Leaf::AnyTuple {}}}, std::move (rest)}};
+    return {{{VF::AtVariantType {Leaf::any_tuple}}, std::move (rest)}};
   case '*':
-    return {{{VF::AtVariantType {Leaf::AnyType {}}}, std::move (rest)}};
+    return {{{VF::AtVariantType {Leaf::any_type}}, std::move (rest)}};
   case '&':
     {
       auto maybe_result {parse_pointer_format (rest)};
@@ -706,10 +706,10 @@ VariantType
 convenience_to_variant_type (VF::Convenience const& convenience)
 {
   auto vh {VisitHelper {
-    [](VF::Convenience::Type::StringArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::String {}}}}}}}}}; },
-    [](VF::Convenience::Type::ObjectPathArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::ObjectPath {}}}}}}}}}; },
-    [](VF::Convenience::Type::ByteString const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::Byte {}}}}}}}}}; },
-    [](VF::Convenience::Type::ByteStringArray const&) { return VariantType {{VT::Array {{VariantType {{VT::Array {{VariantType {{Leaf::Basic {Leaf::Byte {}}}}}}}}}}}}; },
+    [](VF::Convenience::Type::StringArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::string_}}}}}}}}; },
+    [](VF::Convenience::Type::ObjectPathArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::object_path}}}}}}}}; },
+    [](VF::Convenience::Type::ByteString const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::byte_}}}}}}}}; },
+    [](VF::Convenience::Type::ByteStringArray const&) { return VariantType {{VT::Array {{VariantType {{VT::Array {{VariantType {{Leaf::Basic {Leaf::byte_}}}}}}}}}}}; },
   }};
   return std::visit (vh, convenience.type.v);
 }

@@ -38,21 +38,38 @@ namespace Leaf
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Variant); // v
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (AnyTuple); // r
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (AnyType); // *
+inline constexpr Variant variant {};
+inline constexpr AnyTuple any_tuple {};
+inline constexpr AnyType any_type {};
 
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Bool); // b
+inline constexpr Bool bool_ {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Byte); // y
+inline constexpr Byte byte_ {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (I16); // n
+inline constexpr I16 i16 {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (U16); // q
+inline constexpr U16 u16 {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (I32); // i
+inline constexpr I32 i32 {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (U32); // u
+inline constexpr U32 u32 {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (I64); // x
+inline constexpr I64 i64 {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (U64); // t
+inline constexpr U64 u64 {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Handle); // h
+inline constexpr Handle handle {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Double); // d
+inline constexpr Double double_ {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (String); // s
+inline constexpr String string_ {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (ObjectPath); // o
+inline constexpr ObjectPath object_path {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Signature); // g
+inline constexpr Signature signature {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (AnyBasic); // ?
+inline constexpr AnyBasic any_basic {};
 
 GGP_LIB_VARIANT_STRUCT (Basic,
                         Bool,
@@ -217,9 +234,13 @@ struct Convenience
   struct Type
   {
     GGP_LIB_TRIVIAL_TYPE (StringArray);
+    static inline constexpr StringArray string_array {};
     GGP_LIB_TRIVIAL_TYPE (ObjectPathArray);
+    static inline constexpr ObjectPathArray object_path_array {};
     GGP_LIB_TRIVIAL_TYPE (ByteString);
+    static inline constexpr ByteString byte_string {};
     GGP_LIB_TRIVIAL_TYPE (ByteStringArray);
+    static inline constexpr ByteStringArray byte_string_array {};
 
     using V = std::variant
       <
@@ -235,7 +256,9 @@ struct Convenience
   struct Kind
   {
     GGP_LIB_TRIVIAL_TYPE (Constant);
+    static inline constexpr Constant constant {};
     GGP_LIB_TRIVIAL_TYPE (Duplicated);
+    static inline constexpr Duplicated duplicated {};
 
     using V = std::variant
       <
