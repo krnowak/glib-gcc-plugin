@@ -11,7 +11,9 @@ use File::Spec;
 use Getopt::Long;
 use IO::File;
 
-sub stl_check_handler
+# common handlers
+
+sub common_check_handler
 {
     my ($context, $value) = @_;
     my $token_inc = File::Spec->catfile (@{$context->{'out_components'}}, 'token.hh');
@@ -20,8 +22,17 @@ sub stl_check_handler
         'token',
     );
     my $token_def = join ('_', map { uc ($_) } @token_def_parts);
+    return ["#include \"$token_inc\"", "#define $value $token_def"];
+}
+
+# style stl
+
+sub stl_check_handler
+{
+    my ($context, $value) = @_;
+    my $generated_lines = common_check_handler ($context, $value);
     my $lines = $context->{'state'}{'lines'};
-    push (@{$lines}, "#include \"$token_inc\"", "#define $value $token_def");
+    push (@{$lines}, @{$generated_lines});
 }
 
 sub stl_done_handler
@@ -63,19 +74,85 @@ sub stl_stl_handler
     push (@{$lines}, "#include <$value>");
 }
 
+# style gcc
+
+sub gcc_check_handler
+{
+    my ($context, $value) = @_;
+    my $generated_lines = common_check_handler ($context, $value);
+    my $pre_gcc_lines = $context->{'state'}{'pre_gcc_lines'};
+    push (@{$pre_gcc_lines}, @{$generated_lines});
+}
+
+sub gcc_done_handler
+{
+    my ($context, $fd) = @_;
+    my $pre_gcc_lines = $context->{'state'}{'pre_gcc_lines'};
+    my $gcc_lines = $context->{'state'}{'gcc_lines'};
+    my $post_gcc_lines = $context->{'state'}{'post_gcc_lines'};
+    for my $lines ($pre_gcc_lines, $gcc_lines, $post_gcc_lines)
+    {
+        for my $line (@{$lines})
+        {
+            $fd->say ($line);
+        }
+    }
+}
+
 sub gcc_lib_handler
 {
     my ($context, $value) = @_;
+    my $inc = File::Spec->catfile (@{$context->{'out_gen_components'}}, $value);
+    my $post_gcc_lines = $context->{'state'}{'post_gcc_lines'};
+    push (@{$post_gcc_lines}, "#include \"$inc\"");
+}
+
+sub insert_gcc_header
+{
+    my ($context) = @_;
+    my $gcc_lines = $context->{'state'}{'gcc_lines'};
+    if (@{$gcc_lines} > 0)
+    {
+        return;
+    }
+    push (@{$gcc_lines}, "#include \"ggp/gcc/gcc.hh\"");
+}
+
+sub gcc_sizeof_handler
+{
+    my ($context) = @_;
+    insert_gcc_header ($context);
+}
+
+sub gcc_start_handler
+{
+    my ($context) = @_;
+    $context->{'state'}{'pre_gcc_lines'} = [];
+    $context->{'state'}{'gcc_lines'} = [];
+    $context->{'state'}{'post_gcc_lines'} = [];
+    $context->{'state'}{'gcc_stl_headers'} = {
+        'algorithm' => 1,
+        'list' => 1,
+        'map' => 1,
+        'set' => 1,
+        'string' => 1,
+        'vector' => 1,
+    };
 }
 
 sub gcc_stl_handler
 {
     my ($context, $value) = @_;
-}
-
-sub gcc_sizeof_handler
-{
-    my ($context, $value) = @_;
+    my $gcc_stl_headers = $context->{'state'}{'gcc_stl_headers'};
+    if (exists ($gcc_stl_headers->{$value}))
+    {
+        insert_gcc_header ($context);
+    }
+    else
+    {
+        my $post_gcc_lines = $context->{'state'}{'post_gcc_lines'};
+        push (@{$post_gcc_lines}, "#include <$value>");
+    }
 }
 
 my %stl_type_handlers = (
@@ -88,9 +165,12 @@ my %stl_type_handlers = (
     );
 
 my %gcc_type_handlers = (
+    'check' => \&gcc_check_handler,
+    'done' => \&gcc_done_handler,
     'lib' => \&gcc_lib_handler,
-    'stl' => \&gcc_stl_handler,
     'sizeof' => \&gcc_sizeof_handler,
+    'start' => \&gcc_start_handler,
+    'stl' => \&gcc_stl_handler,
     );
 
 my $type_handlers_per_style = {
