@@ -16,10 +16,11 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ggp-gcc.hh"
+#include "ggp/gcc/gcc.hh"
 
-#include "ggp-main.hh"
-#include "ggp-util.hh"
+#include "ggp/gcc/main.hh"
+
+#include "ggp/gcc/generated/util.hh"
 
 #include <stdio.h>
 
@@ -34,8 +35,8 @@ plugin_init (struct plugin_name_args* plugin_info,
 {
   if (!plugin_default_version_check (version, &gcc_version))
   {
-    puts ("This GCC plugin is for version " GGP_UTIL_STR (GCCPLUGIN_VERSION_MAJOR)
-          "." GGP_UTIL_STR (GCCPLUGIN_VERSION_MINOR));
+    puts ("This GCC plugin is for version " GGP_LIB_UTIL_STR (GCCPLUGIN_VERSION_MAJOR)
+          "." GGP_LIB_UTIL_STR (GCCPLUGIN_VERSION_MINOR));
     return 1;
   }
 
@@ -43,7 +44,7 @@ plugin_init (struct plugin_name_args* plugin_info,
                      PLUGIN_INFO,
                      NULL /* callback */,
                      &ggp_plugin_info);
-  Ggp::main_setup (plugin_info);
+  Ggp::Gcc::main_setup (plugin_info);
 
   return 0;
 }

@@ -16,15 +16,15 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ggp-vc.hh"
+#include "ggp/gcc/vc.hh"
 
-#include "ggp-type.hh"
-#include "ggp-variant.hh"
+#include "ggp/gcc/generated/type.hh"
+#include "ggp/gcc/generated/variant.hh"
 
 #include <optional>
 #include <queue>
 
-namespace Ggp
+namespace Ggp::Gcc
 {
 
 namespace {
@@ -312,13 +312,13 @@ ggp_vc_finish_parse_function (void* gcc_data,
       warning (0, "format is not a string literal");
       continue;
     }
-    auto mvf = VariantFormat::from_string (format);
+    auto mvf = Lib::VariantFormat::from_string (format);
     if (!mvf)
     {
       warning (0, "invalid variant format");
       continue;
     }
-    auto types = expected_types_for_format (*mvf);
+    auto types = Lib::expected_types_for_format (*mvf);
     if (types.size() != format_arg_params.size())
     {
       warning (0, "expected %lu parameters, got %lu", types.size(), format_arg_params.size());
@@ -413,11 +413,11 @@ ggp_vc_attributes (void* /* gcc_data, it is always NULL */,
 } // namespace
 
 VariantChecker::VariantChecker (struct plugin_name_args* plugin_info)
-  : name {Util::subplugin_name (plugin_info, "vc")},
+  : name {subplugin_name (plugin_info, "vc")},
     finish_decl {name, PLUGIN_FINISH_DECL, ggp_vc_finish_decl, this},
     start_parse_function {name, PLUGIN_START_PARSE_FUNCTION, ggp_vc_start_parse_function, this},
     finish_parse_function {name, PLUGIN_FINISH_PARSE_FUNCTION, ggp_vc_finish_parse_function, this},
     attributes {name, PLUGIN_ATTRIBUTES, ggp_vc_attributes, this}
 {}
 
-} // namespace Ggp
+} // namespace Ggp::Gcc

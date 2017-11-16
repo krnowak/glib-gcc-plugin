@@ -1,1 +1,1 @@
-source_generator_script = find_program('gen-standalone-headers.pl')
+source_generator_script = find_program('gen-standalone-files.pl')

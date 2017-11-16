@@ -16,27 +16,27 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GGP_TC_HH
-#define GGP_TC_HH
+#ifndef GGP_VC_HH
+#define GGP_VC_HH
 
-#include "ggp-gcc.hh"
+#include "ggp/gcc/gcc.hh"
 
-#include "ggp-util.hh"
+#include "ggp/gcc/util.hh"
 
-namespace Ggp
+namespace Ggp::Gcc
 {
 
-struct TupleChecker
+struct VariantChecker
 {
-  TupleChecker(struct plugin_name_args* plugin_info);
+  VariantChecker(struct plugin_name_args* plugin_info);
 
   std::string name;
-  Util::CallbackRegistration finish_decl;
-  Util::CallbackRegistration start_parse_function;
-  Util::CallbackRegistration finish_parse_function;
-  Util::CallbackRegistration attributes;
+  CallbackRegistration finish_decl;
+  CallbackRegistration start_parse_function;
+  CallbackRegistration finish_parse_function;
+  CallbackRegistration attributes;
 };
 
-} // namespace Ggp
+} // namespace Ggp::Gcc
 
-#endif /* GGP_TC_HH */
+#endif /* GGP_VC_HH */

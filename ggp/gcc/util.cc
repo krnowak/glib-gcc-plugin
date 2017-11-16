@@ -18,10 +18,7 @@
 
 #include "ggp/gcc/util.hh"
 
-namespace Ggp
-{
-
-namespace Gcc
+namespace Ggp::Gcc
 {
 
 namespace
@@ -97,6 +94,4 @@ CallbackRegistration::~CallbackRegistration ()
   }
 }
 
-} // namespace Gcc
-
-} // namespace Ggp
+} // namespace Ggp::Gcc

@@ -16,27 +16,46 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GGP_VC_HH
-#define GGP_VC_HH
+#include "ggp/gcc/main.hh"
+#include "ggp/gcc/util.hh"
+#include "ggp/gcc/tc.hh"
+#include "ggp/gcc/vc.hh"
 
-#include "ggp-gcc.hh"
-
-#include "ggp-util.hh"
-
-namespace Ggp
+namespace Ggp::Gcc
 {
 
-struct VariantChecker
+namespace {
+
+struct Main
 {
-  VariantChecker(struct plugin_name_args* plugin_info);
+  Main (struct plugin_name_args* plugin_info);
 
   std::string name;
-  Util::CallbackRegistration finish_decl;
-  Util::CallbackRegistration start_parse_function;
-  Util::CallbackRegistration finish_parse_function;
-  Util::CallbackRegistration attributes;
+  VariantChecker vc;
+  TupleChecker tc;
+  CallbackRegistration finish_unit;
 };
 
-} // namespace Ggp
+void
+main_finish (void* /* gcc_data */,
+             void* user_data)
+{
+  delete static_cast<Main*> (user_data);
+}
 
-#endif /* GGP_VC_HH */
+Main::Main (struct plugin_name_args* plugin_info)
+  : name {subplugin_name (plugin_info, "main")},
+    vc {plugin_info},
+    tc {plugin_info},
+    finish_unit {name, PLUGIN_FINISH_UNIT, main_finish, this}
+{}
+
+} // namespace
+
+void
+main_setup (struct plugin_name_args* plugin_info)
+{
+  new Main (plugin_info);
+}
+
+} // namespace Ggp::Gcc

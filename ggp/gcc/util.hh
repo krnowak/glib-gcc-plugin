@@ -19,12 +19,9 @@
 #ifndef GGP_GCC_UTIL_HH
 #define GGP_GCC_UTIL_HH
 
-#include "gcc.hh"
+#include "ggp/gcc/gcc.hh"
 
-namespace Ggp
-{
-
-namespace Gcc
+namespace Ggp::Gcc
 {
 
 std::string
@@ -45,8 +42,6 @@ private:
   int event;
 };
 
-} // namespace Gcc
-
-} // namespace Ggp
+} // namespace Ggp::Gcc
 
 #endif /* GGP_GCC_UTIL_HH */

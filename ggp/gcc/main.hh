@@ -19,14 +19,14 @@
 #ifndef GGP_MAIN_HH
 #define GGP_MAIN_HH
 
-#include "ggp-gcc.hh"
+#include "ggp/gcc/gcc.hh"
 
-namespace Ggp
+namespace Ggp::Gcc
 {
 
 void
 main_setup (struct plugin_name_args* plugin_info);
 
-} // namespace Ggp
+} // namespace Ggp::Gcc
 
 #endif /* GGP_MAIN_HH */

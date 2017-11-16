@@ -16,7 +16,7 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ggp-tc.hh"
+#include "ggp/gcc/tc.hh"
 
 #if 0
 static tree
@@ -65,7 +65,7 @@ g_tuple_finish_parse_function (void *gcc_data,
 
 #endif
 
-namespace Ggp
+namespace Ggp::Gcc
 {
 
 namespace {
@@ -101,11 +101,11 @@ ggp_tc_attributes (void* /* gcc_data */,
 } // namespace
 
 TupleChecker::TupleChecker (struct plugin_name_args* plugin_info)
-  : name {Util::subplugin_name (plugin_info, "tc")},
+  : name {subplugin_name (plugin_info, "tc")},
     finish_decl {name, PLUGIN_FINISH_DECL, ggp_tc_finish_decl, this},
     start_parse_function {name, PLUGIN_START_PARSE_FUNCTION, ggp_tc_start_parse_function, this},
     finish_parse_function {name, PLUGIN_FINISH_PARSE_FUNCTION, ggp_tc_finish_parse_function, this},
     attributes {name, PLUGIN_ATTRIBUTES, ggp_tc_attributes, this}
 {}
 
-} // namespace Ggp
+} // namespace Ggp::Gcc
