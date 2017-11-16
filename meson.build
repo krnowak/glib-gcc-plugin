@@ -1,0 +1,5 @@
+project('glib-gcc-plugin', 'cpp')
+add_project_arguments('-std=c++17', language: 'cpp')
+toplevel_inc = include_directories('.')
+subdir('scripts')
+subdir('ggp')
