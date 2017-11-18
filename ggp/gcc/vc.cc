@@ -187,7 +187,7 @@ void
 ggp_vc_finish_parse_function (void* gcc_data,
                               void* /* user_data */)
 {
-  dump_node (static_cast<const_tree> (gcc_data), 0, stderr);
+  dump_node (static_cast<const_tree> (gcc_data), TDF_ADDRESS, stderr);
   auto function_decl = static_cast<tree> (gcc_data);
   gcc_assert (TREE_CODE (function_decl) == FUNCTION_DECL);
 
@@ -440,7 +440,7 @@ vc_cfg_pass::execute (function *)
 {
   warning (0, "Analyze cfg of function %s",
            IDENTIFIER_POINTER (DECL_NAME (current_function_decl)));
-  gimple_debug_cfg (0);
+  gimple_debug_cfg (TDF_DETAILS | TDF_STATS | TDF_BLOCKS | TDF_COMMENT | TDF_ENUMERATE_LOCALS);
   return 0;
 }
 

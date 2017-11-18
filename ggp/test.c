@@ -2,16 +2,21 @@ typedef int gint;
 typedef gint gboolean;
 typedef unsigned char guchar;
 typedef char gchar;
+typedef struct
+{} GVariant;
+
+typedef struct
+{} GVariantBuilder;
 
 #define NULL ((void *) 0)
 
-static void
+static GVariant *
 variant_set (int a, const char *format, ...)  __attribute__ ((glib_variant("set", 2, 3)));
 
-static void
+static GVariant *
 variant_set (int a, const char *format, ...)
 {
-
+  return NULL;
 }
 
 void
@@ -28,7 +33,7 @@ bar (void)
   double d;
   guchar c = 13;
   const gchar *foo = NULL;
-  variant_set (33, "(iy)", 42, c);
+  GVariant *v = variant_set (33, "(iy)", 42, c);
   extern_variant_get (1, "(dms&st)", &d, NULL, &foo, (unsigned long long)5);
 }
 
