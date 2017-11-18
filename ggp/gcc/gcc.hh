@@ -37,6 +37,9 @@
 #include "tree.h"
 #include "dumpfile.h"
 #include "tree-iterator.h"
+#include "tree-pass.h"
+#include "tree-cfg.h"
+#include "context.h"
 
 // system.h header includes ctype.h, which defines the macros undeffed
 // below. system.h actually indirectly undefs them and replaces them

@@ -13,4 +13,4 @@ custom_target('dump-test',
                         '@INPUT@'],
               build_always: true,
               build_by_default: false,
-              dependencies: [ggp_gcc_plugin])
+              depends: [ggp_gcc_plugin])

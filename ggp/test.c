@@ -29,7 +29,7 @@ bar (void)
   guchar c = 13;
   const gchar *foo = NULL;
   variant_set (33, "(iy)", 42, c);
-  extern_variant_get (1, "(dms&s)", &d, NULL, &foo);
+  extern_variant_get (1, "(dms&st)", &d, NULL, &foo, (unsigned long long)5);
 }
 
 static int

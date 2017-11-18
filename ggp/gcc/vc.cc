@@ -410,7 +410,49 @@ ggp_vc_attributes (void* /* gcc_data, it is always NULL */,
   register_attribute (&vc_attribute_spec);
 }
 
-} // namespace
+const pass_data vc_cfg_pass_data =
+{
+  GIMPLE_PASS, /* type */
+  "vc_cfg", /* name */
+  OPTGROUP_NONE, /* optinfo_flags */
+  TV_NONE, /* tv_id */
+  PROP_cfg, /* properties_required */
+  0, /* properties_provided */
+  0, /* properties_destroyed */
+  0, /* todo_flags_start */
+  0, /* todo_flags_finish */
+};
+
+class vc_cfg_pass : public gimple_opt_pass
+{
+public:
+  vc_cfg_pass(gcc::context *ctxt)
+    : gimple_opt_pass(vc_cfg_pass_data, ctxt)
+  {}
+
+  /* opt_pass methods: */
+  virtual unsigned int execute (function *);
+
+};
+
+unsigned int
+vc_cfg_pass::execute (function *)
+{
+  warning (0, "Analyze cfg of function %s",
+           IDENTIFIER_POINTER (DECL_NAME (current_function_decl)));
+  gimple_debug_cfg (0);
+  return 0;
+}
+
+std::unique_ptr<register_pass_info>
+get_register_vc_cfg_pass_info ()
+{
+  // g - a global gcc::context
+  register_pass_info pass_info { new vc_cfg_pass (g), "cfg", 1, PASS_POS_INSERT_AFTER };
+  return std::make_unique<register_pass_info> (pass_info);
+}
+
+} // anonymous namespace
 
 VariantChecker::VariantChecker (struct plugin_name_args* plugin_info)
   : name {subplugin_name (plugin_info, "vc")},
@@ -418,6 +460,14 @@ VariantChecker::VariantChecker (struct plugin_name_args* plugin_info)
     start_parse_function {name, PLUGIN_START_PARSE_FUNCTION, ggp_vc_start_parse_function, this},
     finish_parse_function {name, PLUGIN_FINISH_PARSE_FUNCTION, ggp_vc_finish_parse_function, this},
     attributes {name, PLUGIN_ATTRIBUTES, ggp_vc_attributes, this}
-{}
+{
+  auto reg_pass_info {get_register_vc_cfg_pass_info ()};
+  // Nothing to unregister for the PLUGIN_PASS_MANAGER_SETUP event -
+  // it takes no callback.
+  ::register_callback (name.c_str (),
+                       PLUGIN_PASS_MANAGER_SETUP,
+                       NULL,
+                       reg_pass_info.get ());
+}
 
 } // namespace Ggp::Gcc
