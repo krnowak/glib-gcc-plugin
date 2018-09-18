@@ -11,6 +11,6 @@ custom_target('dump-test',
                         '-fplugin=@0@'.format(ggp_gcc_plugin.full_path()),
                         '-c',
                         '@INPUT@'],
-              build_always: true,
+              build_always_stale: true,
               build_by_default: false,
               depends: [ggp_gcc_plugin])

@@ -398,8 +398,9 @@ struct attribute_spec vc_attribute_spec =
   /* decl required:          */ false,
   /* type required:          */ true,
   /* function type required: */ true,
+  /* affects type identity:  */ false,
   /* handler:                */ vc_handler,
-  /* affects type identity:  */ false
+  /* exclusions:             */ nullptr
 };
 
 void
@@ -440,7 +441,7 @@ vc_cfg_pass::execute (function *)
 {
   warning (0, "Analyze cfg of function %s",
            IDENTIFIER_POINTER (DECL_NAME (current_function_decl)));
-  gimple_debug_cfg (TDF_DETAILS | TDF_STATS | TDF_BLOCKS | TDF_COMMENT | TDF_ENUMERATE_LOCALS);
+  gimple_debug_cfg (TDF_DETAILS | TDF_STATS | TDF_BLOCKS | TDF_ENUMERATE_LOCALS);
   return 0;
 }
 

@@ -40,6 +40,8 @@
 #include "tree-pass.h"
 #include "tree-cfg.h"
 #include "context.h"
+#include "stringpool.h"
+#include "attribs.h"
 
 // system.h header includes ctype.h, which defines the macros undeffed
 // below. system.h actually indirectly undefs them and replaces them
