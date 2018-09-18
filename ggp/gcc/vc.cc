@@ -441,7 +441,7 @@ vc_cfg_pass::execute (function *)
 {
   warning (0, "Analyze cfg of function %s",
            IDENTIFIER_POINTER (DECL_NAME (current_function_decl)));
-  gimple_debug_cfg (TDF_DETAILS | TDF_STATS | TDF_BLOCKS | TDF_ENUMERATE_LOCALS);
+  gimple_dump_cfg (stderr, TDF_DETAILS | TDF_STATS | TDF_BLOCKS | TDF_ENUMERATE_LOCALS);
   return 0;
 }
 
