@@ -432,17 +432,7 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
   {
     // a
   case 'a':
-    maybe_c = state.take_one ();
-
-    if (!maybe_c)
     {
-      return {};
-    }
-
-    switch (*maybe_c)
-    {
-      // a&
-    case '&':
       maybe_c = state.take_one ();
 
       if (!maybe_c)
@@ -452,74 +442,82 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
 
       switch (*maybe_c)
       {
-        // a&a
+        // a&
+      case '&':
+        {
+          maybe_c = state.take_one ();
+
+          if (!maybe_c)
+          {
+            return {};
+          }
+
+          switch (*maybe_c)
+          {
+            // a&a
+          case 'a':
+            {
+              maybe_c = state.take_one ();
+
+              if (!maybe_c)
+              {
+                return {};
+              }
+
+              switch (*maybe_c)
+              {
+                // a&ay
+              case 'y':
+                return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::constant}}}, state}};
+              default:
+                return {};
+              }
+            }
+            // a&o
+          case 'o':
+            return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::constant}}}, state}};
+            // a&s
+          case 's':
+            return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::constant}}}, state}};
+          default:
+            return {};
+          }
+        }
+        // aa
       case 'a':
-        maybe_c = state.take_one ();
-
-        if (!maybe_c)
         {
-          return {};
-        }
+          maybe_c = state.take_one ();
 
-        switch (*maybe_c)
-        {
-          // a&ay
-        case 'y':
-          return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::constant}}}, state}};
-        default:
-          return {};
+          if (!maybe_c)
+          {
+            return {};
+          }
+
+          switch (*maybe_c)
+          {
+            // aay
+          case 'y':
+            return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+          default:
+            return {};
+          }
         }
-        // a&o
-      case 'o':
-        return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::constant}}}, state}};
-        // a&s
+        // as
       case 's':
-        return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::constant}}}, state}};
-      default:
-        return {};
-      }
-      // aa
-    case 'a':
-      maybe_c = state.take_one ();
-
-      if (!maybe_c)
-      {
-        return {};
-      }
-
-      switch (*maybe_c)
-      {
-        // aay
+        return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+        // ao
+      case 'o':
+        return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+        // ay
       case 'y':
-        return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+        return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::duplicated}}}, state}};
       default:
         return {};
       }
-      // as
-    case 's':
-      return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
-      // ao
-    case 'o':
-      return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
-      // ay
-    case 'y':
-      return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::duplicated}}}, state}};
-    default:
-      return {};
     }
-  // &
+    // &
   case '&':
-    maybe_c = state.take_one ();
-
-    if (!maybe_c)
     {
-      return {};
-    }
-
-    switch (*maybe_c)
-    {
-      // &a
-    case 'a':
       maybe_c = state.take_one ();
 
       if (!maybe_c)
@@ -529,14 +527,28 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
 
       switch (*maybe_c)
       {
-        // &ay
-      case 'y':
-        return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::constant}}}, state}};
+        // &a
+      case 'a':
+        {
+          maybe_c = state.take_one ();
+
+          if (!maybe_c)
+          {
+            return {};
+          }
+
+          switch (*maybe_c)
+          {
+            // &ay
+          case 'y':
+            return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::constant}}}, state}};
+          default:
+            return {};
+          }
+        }
       default:
         return {};
       }
-    default:
-      return {};
     }
   default:
     return {};
