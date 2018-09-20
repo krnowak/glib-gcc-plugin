@@ -26,179 +26,240 @@ namespace Ggp::Lib
 namespace
 {
 
+struct ParseState
+{
+  auto take_one () -> std::optional<char>;
+  auto take_back () -> void;
+  auto get_rest () -> std::string_view;
+
+  std::string_view string;
+  std::size_t offset;
+};
+
+auto ParseState::take_one () -> std::optional<char>
+{
+  if (this->string.length() < this->offset)
+  {
+    auto c {this->string[this->offset]};
+
+    ++this->offset;
+
+    return {c};
+  }
+  else
+  {
+    return {};
+  }
+}
+
+auto ParseState::take_back () -> void
+{
+  if (this->offset > 0)
+  {
+    --this->offset;
+  }
+}
+
+auto ParseState::get_rest () -> std::string_view
+{
+  if (this->string.length() < this->offset)
+  {
+    return this->string.substr (this->offset);
+  }
+  else
+  {
+    return {};
+  }
+}
+
 template <typename ParsedP>
 struct ParseResult
 {
   ParsedP parsed;
-  std::string_view rest;
+  ParseState state;
 };
 
 using ParseLeafBasicResult = ParseResult<Leaf::Basic>;
 
-std::optional<ParseLeafBasicResult>
-parse_leaf_basic (std::string_view const& string)
+auto
+parse_leaf_basic (ParseState state) -> std::optional<ParseLeafBasicResult>
 {
-  if (string.empty ())
+  auto maybe_c {state.take_one ()};
+
+  if (!maybe_c)
   {
+    /* expected basic type, got premature end of a string */
     return {};
   }
 
-  auto rest {string.substr (1)};
-  switch (string.front ())
+  switch (*maybe_c)
   {
   case 'b':
-    return {{{Leaf::bool_}, rest}};
+    return {{{Leaf::bool_}, state}};
   case 'y':
-    return {{{Leaf::byte_}, rest}};
+    return {{{Leaf::byte_}, state}};
   case 'n':
-    return {{{Leaf::i16}, rest}};
+    return {{{Leaf::i16}, state}};
   case 'q':
-    return {{{Leaf::u16}, rest}};
+    return {{{Leaf::u16}, state}};
   case 'i':
-    return {{{Leaf::i32}, rest}};
+    return {{{Leaf::i32}, state}};
   case 'u':
-    return {{{Leaf::u32}, rest}};
+    return {{{Leaf::u32}, state}};
   case 'x':
-    return {{{Leaf::i64}, rest}};
+    return {{{Leaf::i64}, state}};
   case 't':
-    return {{{Leaf::u64}, rest}};
+    return {{{Leaf::u64}, state}};
   case 'h':
-    return {{{Leaf::handle}, rest}};
+    return {{{Leaf::handle}, state}};
   case 'd':
-    return {{{Leaf::double_}, rest}};
+    return {{{Leaf::double_}, state}};
   case 's':
-    return {{{Leaf::string_}, rest}};
+    return {{{Leaf::string_}, state}};
   case 'o':
-    return {{{Leaf::object_path}, rest}};
+    return {{{Leaf::object_path}, state}};
   case 'g':
-    return {{{Leaf::signature}, rest}};
+    return {{{Leaf::signature}, state}};
   case '?':
-    return {{{Leaf::any_basic}, rest}};
+    return {{{Leaf::any_basic}, state}};
   default:
+    /* expected basic type, got X */
     return {};
   }
 }
 
 using ParseTypeResult = ParseResult<VariantType>;
 
-std::optional<ParseTypeResult>
-parse_single_type (std::string_view const& string);
+auto parse_single_type (ParseState state) -> std::optional<ParseTypeResult>;
 
 using ParseEntryTypeResult = ParseResult<VT::Entry>;
 
-std::optional<ParseEntryTypeResult>
-parse_entry_type (std::string_view const& string)
+auto parse_entry_type (ParseState state) -> std::optional<ParseEntryTypeResult>
 {
-  auto maybe_first_result {parse_leaf_basic (string)};
+  auto maybe_first_result {parse_leaf_basic (state)};
   if (!maybe_first_result)
   {
+    /* failed to parse first type for an entry: <reason> */
     return {};
   }
-  auto maybe_second_result {parse_single_type (maybe_first_result->rest)};
+  auto maybe_second_result {parse_single_type (maybe_first_result->state)};
   if (!maybe_second_result)
   {
+    /* failed to parse second type for an entry: <reason> */
     return {};
   }
-  if (maybe_second_result->rest.empty ())
+  auto maybe_c {maybe_second_result->state.take_one ()};
+  if (!maybe_c)
   {
+    /* expected '}', got premature end of a string */
     return {};
   }
-  if (maybe_second_result->rest.front () != '}')
+  if (*maybe_c != '}')
   {
+    /* expected '}', got X */
     return {};
   }
-  return {{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->rest.substr (1)}};
+  return {{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->state}};
 }
 
 using ParseTupleTypeResult = ParseResult<VT::Tuple>;
 
-std::optional<ParseTupleTypeResult>
-parse_tuple_type (std::string_view string)
+auto parse_tuple_type (ParseState state) -> std::optional<ParseTupleTypeResult>
 {
   std::vector<VariantType> types {};
   for (;;)
   {
-    if (string.empty ())
+    auto maybe_c {state.take_one ()};
+    if (!maybe_c)
     {
+      /* expected either a type or ')', got premature end of a string */
       return {};
     }
-    if (string.front () == ')')
+    if (*maybe_c == ')')
     {
-      return {{{std::move (types)}, string.substr (1)}};
+      return {{{std::move (types)}, state}};
     }
-    auto maybe_result {parse_single_type (string)};
+    auto maybe_result {parse_single_type (state)};
     if (!maybe_result)
     {
+      /* failed to parse Nth type of a tuple: <reason> */
       return {};
     }
-    string = std::move (maybe_result->rest);
+    state = std::move (maybe_result->state);
     types.push_back (std::move (maybe_result->parsed));
   }
 }
 
-std::optional<ParseTypeResult>
-parse_single_type (std::string_view const& string)
+auto parse_single_type (ParseState state) -> std::optional<ParseTypeResult>
 {
-  if (string.empty ())
+  auto maybe_c {state.take_one ()};
+  if (!maybe_c)
   {
+    /* expected a type, got premature end of a string */
     return {};
   }
 
-  auto rest {string.substr (1)};
-  switch (string.front ())
+  switch (*maybe_c)
   {
   case '{':
     {
-      auto maybe_result {parse_entry_type (rest)};
+      auto maybe_result {parse_entry_type (state)};
       if (!maybe_result)
       {
+        /* failed to parse entry type: <reason> */
         return {};
       }
-      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
     }
   case '(':
     {
-      auto maybe_result {parse_tuple_type (rest)};
+      auto maybe_result {parse_tuple_type (state)};
       if (!maybe_result)
       {
+        /* failed to parse tuple type: <reason> */
         return {};
       }
-      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
     }
   case 'm':
     {
-      auto maybe_result {parse_single_type (rest)};
+      auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
+        /* failed to parse maybe type: <reason> */
         return {};
       }
-      return {{{{VT::Maybe {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
+      return {{{{VT::Maybe {std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}};
     }
   case 'a':
     {
-      auto maybe_result {parse_single_type (rest)};
+      auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
+        /* failed to parse array type: <reason> */
         return {};
       }
-      return {{{{VT::Array {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
+      return {{{{VT::Array {std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}};
     }
   case '*':
-    return {{{{Leaf::any_type}}, std::move (rest)}};
+    return {{{{Leaf::any_type}}, std::move (state)}};
   case 'r':
-    return {{{{Leaf::any_tuple}}, std::move (rest)}};
+    return {{{{Leaf::any_tuple}}, std::move (state)}};
   case 'v':
-    return {{{{Leaf::variant}}, std::move (rest)}};
+    return {{{{Leaf::variant}}, std::move (state)}};
   default:
     {
-      auto maybe_result {parse_leaf_basic (string)};
+      state.take_back();
+
+      auto maybe_result {parse_leaf_basic (state)};
 
       if (!maybe_result)
       {
+        /* failed to parse type, expected '{', '(', 'm', 'a', '*', 'r', 'v' or a basic type, got X */
         return {};
       }
 
-      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
     }
   }
 }
@@ -208,14 +269,17 @@ parse_single_type (std::string_view const& string)
 /* static */ std::optional<VariantType>
 VariantType::from_string (std::string_view const& string)
 {
-  auto maybe_result {parse_single_type (string)};
+  auto state {ParseState{string, 0}};
+  auto maybe_result {parse_single_type (state)};
 
   if (!maybe_result)
   {
+    /* failed to parse variant type: <reason> */
     return {};
   }
-  if (!maybe_result->rest.empty ())
+  if (auto rest {maybe_result->state.get_rest()}; !rest.empty ())
   {
+    /* string contains more than one complete type: <rest> */
     return {};
   }
 
@@ -289,262 +353,340 @@ namespace
 
 using ParsePointerFormatResult = ParseResult<VF::Pointer>;
 
-std::optional<ParsePointerFormatResult>
-parse_pointer_format (std::string_view const& string)
+auto parse_pointer_format (ParseState state) -> std::optional<ParsePointerFormatResult>
 {
-  if (string.empty ())
+  auto maybe_c {state.take_one ()};
+  if (!maybe_c)
   {
+    /* expected pointer type, got premature end of a string */
     return {};
   }
-  auto rest {string.substr (1)};
-  switch (string.front ())
+  switch (*maybe_c)
   {
   case 's':
-    return {{{{Leaf::string_}}, std::move (rest)}};
+    return {{{{Leaf::string_}}, std::move (state)}};
   case 'o':
-    return {{{{Leaf::object_path}}, std::move (rest)}};
+    return {{{{Leaf::object_path}}, std::move (state)}};
   case 'g':
-    return {{{{Leaf::signature}}, std::move (rest)}};
+    return {{{{Leaf::signature}}, std::move (state)}};
   default:
+    /* expected 's' or 'o' or 'g', got X */
     return {};
   }
 }
 
 using ParseBasicFormatResult = ParseResult<VF::BasicFormat>;
 
-std::optional<ParseBasicFormatResult>
-parse_basic_format (std::string_view const& string)
+auto parse_basic_format (ParseState state) -> std::optional<ParseBasicFormatResult>
 {
-  if (string.empty ())
+  auto maybe_c {state.take_one ()};
+  if (!maybe_c)
   {
     return {};
   }
-  auto rest {string.substr (1)};
-  switch (string.front ())
+  switch (*maybe_c)
   {
   case '@':
     {
-      auto maybe_result {parse_leaf_basic (rest)};
+      auto maybe_result {parse_leaf_basic (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{{VF::AtBasicType {std::move (maybe_result->parsed)}}}, std::move (maybe_result->rest)}};
+      return {{{{VF::AtBasicType {std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}};
     }
   case '&':
     {
-      auto maybe_result {parse_pointer_format (rest)};
+      auto maybe_result {parse_pointer_format (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
     }
   default:
     {
-      auto maybe_result {parse_leaf_basic (string)};
+      state.take_back ();
+      auto maybe_result {parse_leaf_basic (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
     }
   }
 }
 
 using ParseConvenienceFormatResult = ParseResult<VF::Convenience>;
 
-std::optional<ParseConvenienceFormatResult>
-parse_convenience_format (std::string_view const& string)
+auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenienceFormatResult>
 {
-  auto len {4u};
-  auto sub {string.substr (0, len)};
-  if (sub == "a&ay")
+  auto maybe_c {state.take_one ()};
+
+  if (!maybe_c)
   {
-    return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::constant}}}, string.substr (len)}};
+    return {};
   }
 
-  len = 3;
-  sub = string.substr (0, len);
-  if (sub == "aay")
+  switch (*maybe_c)
   {
-    return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::duplicated}}}, string.substr (len)}};
-  }
-  if (sub == "&ay")
-  {
-    return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::constant}}}, string.substr (len)}};
-  }
-  if (sub == "a&o")
-  {
-    return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::constant}}}, string.substr (len)}};
-  }
-  if (sub == "a&s")
-  {
-    return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::constant}}}, string.substr (len)}};
-  }
+    // a
+  case 'a':
+    maybe_c = state.take_one ();
 
-  len = 2;
-  sub = string.substr (0, len);
-  if (sub == "as")
-  {
-    return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::duplicated}}}, string.substr (len)}};
+    if (!maybe_c)
+    {
+      return {};
+    }
+
+    switch (*maybe_c)
+    {
+      // a&
+    case '&':
+      maybe_c = state.take_one ();
+
+      if (!maybe_c)
+      {
+        return {};
+      }
+
+      switch (*maybe_c)
+      {
+        // a&a
+      case 'a':
+        maybe_c = state.take_one ();
+
+        if (!maybe_c)
+        {
+          return {};
+        }
+
+        switch (*maybe_c)
+        {
+          // a&ay
+        case 'y':
+          return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::constant}}}, state}};
+        default:
+          return {};
+        }
+        // a&o
+      case 'o':
+        return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::constant}}}, state}};
+        // a&s
+      case 's':
+        return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::constant}}}, state}};
+      default:
+        return {};
+      }
+      // aa
+    case 'a':
+      maybe_c = state.take_one ();
+
+      if (!maybe_c)
+      {
+        return {};
+      }
+
+      switch (*maybe_c)
+      {
+        // aay
+      case 'y':
+        return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+      default:
+        return {};
+      }
+      // as
+    case 's':
+      return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+      // ao
+    case 'o':
+      return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+      // ay
+    case 'y':
+      return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+    default:
+      return {};
+    }
+  // &
+  case '&':
+    maybe_c = state.take_one ();
+
+    if (!maybe_c)
+    {
+      return {};
+    }
+
+    switch (*maybe_c)
+    {
+      // &a
+    case 'a':
+      maybe_c = state.take_one ();
+
+      if (!maybe_c)
+      {
+        return {};
+      }
+
+      switch (*maybe_c)
+      {
+        // &ay
+      case 'y':
+        return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::constant}}}, state}};
+      default:
+        return {};
+      }
+    default:
+      return {};
+    }
+  default:
+    return {};
   }
-  if (sub == "ao")
-  {
-    return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::duplicated}}}, string.substr (len)}};
-  }
-  if (sub == "ay")
-  {
-    return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::duplicated}}}, string.substr (len)}};
-  }
-  return {};
 }
 
 using ParseTupleFormat = ParseResult<VF::Tuple>;
 using ParseFormatResult = ParseResult<VariantFormat>;
 
-std::optional<ParseFormatResult>
-parse_single_format (std::string_view const& string);
+auto parse_single_format (ParseState state) -> std::optional<ParseFormatResult>;
 
-std::optional<ParseTupleFormat>
-parse_tuple_format (std::string_view string)
+auto parse_tuple_format (ParseState state) -> std::optional<ParseTupleFormat>
 {
   std::vector<VariantFormat> formats {};
 
   for (;;)
   {
-    if (string.empty ())
+    auto maybe_c {state.take_one ()};
+    if (!maybe_c)
     {
       return {};
     }
-    if (string.front () == ')')
+    if (*maybe_c == ')')
     {
-      ParseTupleFormat f {{std::move (formats)}, string.substr (1)};
+      ParseTupleFormat f {{std::move (formats)}, state};
       return {std::move (f)};
     }
-    auto maybe_result {parse_single_format (string)};
+    auto maybe_result {parse_single_format (state)};
     if (!maybe_result)
     {
       return {};
     }
-    string = std::move (maybe_result->rest);
+    state = std::move (maybe_result->state);
     formats.push_back (std::move (maybe_result->parsed));
   }
 }
 
 using ParseEntryFormatResult = ParseResult<VF::Entry>;
 
-std::optional<ParseEntryFormatResult>
-parse_entry_format (std::string_view const& string)
+auto parse_entry_format (ParseState state) -> std::optional<ParseEntryFormatResult>
 {
-  auto maybe_first_result {parse_basic_format (string)};
+  auto maybe_first_result {parse_basic_format (state)};
   if (!maybe_first_result)
   {
     return {};
   }
-  auto maybe_second_result {parse_single_format (maybe_first_result->rest)};
+  auto maybe_second_result {parse_single_format (maybe_first_result->state)};
   if (!maybe_second_result)
   {
     return {};
   }
-  if (maybe_second_result->rest.empty ())
+  auto maybe_c {maybe_second_result->state.take_one()};
+  if (!maybe_c)
   {
     return {};
   }
-  if (maybe_second_result->rest.front () != '}')
+  if (*maybe_c != '}')
   {
     return {};
   }
-  return {{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->rest.substr (1)}};
+  return {{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->state}};
 }
 
 using ParseMaybeFormatResult = ParseResult<VF::Maybe>;
 
-std::optional<ParseMaybeFormatResult>
-parse_maybe_format (std::string_view const& string)
+auto parse_maybe_format (ParseState state) -> std::optional<ParseMaybeFormatResult>
 {
-  if (string.empty ())
+  auto maybe_c {state.take_one()};
+  if (!maybe_c)
   {
     return {};
   }
-  auto rest {string.substr (1)};
-  switch (string.front ())
+  switch (*maybe_c)
   {
     // pointer maybes
   case 'a':
     {
-      auto maybe_result {parse_single_type (rest)};
+      auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{{VF::MaybePointer {{VT::Array {{std::move (maybe_result->parsed)}}}}}}, std::move (maybe_result->rest)}};
+      return {{{{VF::MaybePointer {{VT::Array {{std::move (maybe_result->parsed)}}}}}}, std::move (maybe_result->state)}};
     }
   case '@':
     {
-      auto maybe_result {parse_single_type (rest)};
+      auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{{VF::MaybePointer {{VF::AtVariantType {std::move (maybe_result->parsed)}}}}}, std::move (maybe_result->rest)}};
+      return {{{{VF::MaybePointer {{VF::AtVariantType {std::move (maybe_result->parsed)}}}}}, std::move (maybe_result->state)}};
     }
   case 'v':
-    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::variant}}}}}}, std::move (rest)}};
+    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::variant}}}}}}, std::move (state)}};
   case '*':
-    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_type}}}}}}, std::move (rest)}};
+    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_type}}}}}}, std::move (state)}};
   case 'r':
-    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_tuple}}}}}}, std::move (rest)}};
+    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_tuple}}}}}}, std::move (state)}};
   case '&':
     {
-      auto maybe_result {parse_pointer_format (rest)};
+      auto maybe_result {parse_pointer_format (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{{VF::MaybePointer {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->rest)}};
+      return {{{{VF::MaybePointer {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}};
     }
   case '^':
     {
-      auto maybe_result {parse_convenience_format (rest)};
+      auto maybe_result {parse_convenience_format (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{{VF::MaybePointer {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->rest)}};
+      return {{{{VF::MaybePointer {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}};
     }
     // bool maybes
   case '{':
     {
-      auto maybe_result {parse_entry_format (rest)};
+      auto maybe_result {parse_entry_format (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->rest)}};
+      return {{{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}};
     }
   case '(':
     {
-      auto maybe_result {parse_tuple_format (std::move (rest))};
+      auto maybe_result {parse_tuple_format (std::move (state))};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->rest)}};
+      return {{{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}};
     }
   case 'm':
     {
-      auto maybe_result {parse_maybe_format (rest)};
+      auto maybe_result {parse_maybe_format (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->rest)}};
+      return {{{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}};
     }
     // basic maybes, need to decide whether a pointer or bool
   default:
     {
-      auto maybe_result {parse_leaf_basic (rest)};
+      state.take_back ();
+      auto maybe_result {parse_leaf_basic (state)};
       if (!maybe_result)
       {
         return {};
@@ -565,99 +707,99 @@ parse_maybe_format (std::string_view const& string)
         [](Leaf::Handle const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
         [](Leaf::Double const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
       }};
-      return {{std::visit (vh, maybe_result->parsed.v), std::move (maybe_result->rest)}};
+      return {{std::visit (vh, maybe_result->parsed.v), std::move (maybe_result->state)}};
     }
   }
 }
 
-std::optional<ParseFormatResult>
-parse_single_format (std::string_view const& string)
+auto parse_single_format (ParseState state) -> std::optional<ParseFormatResult>
 {
-  if (string.empty ())
+  auto maybe_c {state.take_one ()};
+  if (!maybe_c)
   {
     return {};
   }
 
-  auto rest {string.substr (1)};
-  switch (string.front ())
+  switch (*maybe_c)
   {
   case 'a':
     {
-      auto maybe_result {parse_single_type (rest)};
+      auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{VT::Array {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+      return {{{VT::Array {std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
     }
   case '@':
     {
-      auto maybe_result {parse_single_type (rest)};
+      auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{VF::AtVariantType {std::move (maybe_result->parsed)}}, std::move (maybe_result->rest)}};
+      return {{{VF::AtVariantType {std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
     }
   case 'v':
-    return {{{VF::AtVariantType {Leaf::variant}}, std::move (rest)}};
+    return {{{VF::AtVariantType {Leaf::variant}}, std::move (state)}};
   case 'r':
-    return {{{VF::AtVariantType {Leaf::any_tuple}}, std::move (rest)}};
+    return {{{VF::AtVariantType {Leaf::any_tuple}}, std::move (state)}};
   case '*':
-    return {{{VF::AtVariantType {Leaf::any_type}}, std::move (rest)}};
+    return {{{VF::AtVariantType {Leaf::any_type}}, std::move (state)}};
   case '&':
     {
-      auto maybe_result {parse_pointer_format (rest)};
+      auto maybe_result {parse_pointer_format (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
+      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
     }
   case '^':
     {
-      auto maybe_result {parse_convenience_format (rest)};
+      auto maybe_result {parse_convenience_format (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
+      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
     }
   case 'm':
     {
-      auto maybe_result {parse_maybe_format (rest)};
+      auto maybe_result {parse_maybe_format (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
+      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
     }
   case '(':
     {
-      auto maybe_result {parse_tuple_format (std::move (rest))};
+      auto maybe_result {parse_tuple_format (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
+      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
     }
   case '{':
     {
-      auto maybe_result {parse_entry_format (rest)};
+      auto maybe_result {parse_entry_format (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
+      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
     }
   default:
     {
-      auto maybe_result {parse_leaf_basic (string)};
+      state.take_back ();
+      auto maybe_result {parse_leaf_basic (state)};
       if (!maybe_result)
       {
         return {};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->rest)}};
+      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
     }
   }
 }
@@ -667,13 +809,14 @@ parse_single_format (std::string_view const& string)
 /* static */ std::optional<VariantFormat>
 VariantFormat::from_string (std::string_view const& string)
 {
-  auto maybe_result {parse_single_format (string)};
+  auto state {ParseState{string, 0}};
+  auto maybe_result {parse_single_format (state)};
 
   if (!maybe_result)
   {
     return {};
   }
-  if (!maybe_result->rest.empty ())
+  if (auto rest {maybe_result->state.get_rest ()}; !rest.empty ())
   {
     return {};
   }
