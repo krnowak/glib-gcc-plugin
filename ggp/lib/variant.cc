@@ -38,7 +38,7 @@ struct ParseState
 
 auto ParseState::take_one () -> std::optional<char>
 {
-  if (this->string.length() < this->offset)
+  if (this->offset < this->string.length())
   {
     auto c {this->string[this->offset]};
 
