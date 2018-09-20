@@ -62,7 +62,7 @@ auto ParseState::take_back () -> void
 
 auto ParseState::get_rest () -> std::string_view
 {
-  if (this->string.length() < this->offset)
+  if (this->offset < this->string.length())
   {
     return this->string.substr (this->offset);
   }
@@ -179,6 +179,7 @@ auto parse_tuple_type (ParseState state) -> std::optional<ParseTupleTypeResult>
     {
       return {{{std::move (types)}, state}};
     }
+    state.take_back ();
     auto maybe_result {parse_single_type (state)};
     if (!maybe_result)
     {
