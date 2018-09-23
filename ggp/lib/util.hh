@@ -221,6 +221,56 @@ generalize (VariantFrom&& v)
                      std::forward<VariantFrom> (v));
 }
 
+template <typename OkType, typename FailureType>
+struct Result
+{
+  static_assert (!std::is_same_v<OkType, FailureType>);
+
+  template <typename OkHandler, typename FailureHandler>
+  auto handle(OkHandler ok_handler, FailureHandler failure_handler)
+  {
+    auto vh {VisitHelper {ok_handler, failure_handler}};
+    return std::visit (vh, this->v);
+  }
+
+  explicit operator bool () const noexcept()
+  {
+    return this->v.holds_alternative<OkType> ();
+  }
+
+  auto operator->() const -> OkType const*
+  {
+    return std::addressof (std::get<OkType> (this->v));
+  }
+
+  auto operator->() -> OkType*
+  {
+    return std::addressof (std::get<OkType> (this->v));
+  }
+
+  auto operator* () const -> OkType const&
+  {
+    return std::get<OkType> (this->v);
+  }
+
+  auto operator* () -> OkType&
+  {
+    return std::get<OkType> (this->v);
+  }
+
+  auto get_failure() const -> FailureType const&
+  {
+    return std::get<FailureType> (this->v);
+  }
+
+  auto get_failure() -> FailureType&
+  {
+    return std::get<FailureType> (this->v);
+  }
+
+  std::variant<OkType, FailureType> v;
+};
+
 } // namespace Ggp::Lib
 
 #else

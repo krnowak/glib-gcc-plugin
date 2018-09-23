@@ -19,6 +19,7 @@
 /*< lib: variant.hh >*/
 /*< stl: algorithm >*/
 /*< stl: iterator >*/
+/*< stl: sstream >*/
 
 namespace Ggp::Lib
 {
@@ -31,6 +32,9 @@ struct ParseState
   auto take_one () -> std::optional<char>;
   auto take_back () -> void;
   auto get_rest () -> std::string_view;
+
+  auto error (std::string reason) -> VariantParseErrorCascade;
+  auto error (std::string reason, VariantParseErrorCascade& error) -> VariantParseErrorCascade;
 
   std::string_view string;
   std::size_t offset;
@@ -72,6 +76,24 @@ auto ParseState::get_rest () -> std::string_view
   }
 }
 
+auto ParseState::error (std::string reason) -> VariantParseErrorCascade
+{
+  return {{{{this->offset, std::move(reason)}}}};
+}
+
+auto ParseState::error (std::string reason, VariantParseErrorCascade& error) -> VariantParseErrorCascade
+{
+  VariantParseErrorCascade e;
+
+  using std::swap;
+
+  swap (error, e);
+
+  e.errors.emplace_back(this->offset, std::move (reason));
+
+  return e;
+}
+
 template <typename ParsedP>
 struct ParseResult
 {
@@ -82,14 +104,13 @@ struct ParseResult
 using ParseLeafBasicResult = ParseResult<Leaf::Basic>;
 
 auto
-parse_leaf_basic (ParseState state) -> std::optional<ParseLeafBasicResult>
+parse_leaf_basic (ParseState state) -> VariantResult<ParseLeafBasicResult>
 {
   auto maybe_c {state.take_one ()};
 
   if (!maybe_c)
   {
-    /* expected basic type, got premature end of a string */
-    return {};
+    return {state.error ("expected basic type, got premature end of a string")};
   }
 
   switch (*maybe_c)
@@ -123,24 +144,28 @@ parse_leaf_basic (ParseState state) -> std::optional<ParseLeafBasicResult>
   case '?':
     return {{{Leaf::any_basic}, state}};
   default:
-    /* expected basic type, got X */
-    return {};
+    {
+      std::ostringstream oss;
+
+      oss << "expected basic type, got '" << *maybe_c << "'";
+
+      return {state->error (oss.str())};
+    }
   }
 }
 
 using ParseTypeResult = ParseResult<VariantType>;
 
-auto parse_single_type (ParseState state) -> std::optional<ParseTypeResult>;
+auto parse_single_type (ParseState state) -> VariantResult<ParseTypeResult>;
 
 using ParseEntryTypeResult = ParseResult<VT::Entry>;
 
-auto parse_entry_type (ParseState state) -> std::optional<ParseEntryTypeResult>
+auto parse_entry_type (ParseState state) -> VariantResult<ParseEntryTypeResult>
 {
   auto maybe_first_result {parse_leaf_basic (state)};
   if (!maybe_first_result)
   {
-    /* failed to parse first type for an entry: <reason> */
-    return {};
+    return state->error ("failed to parse first type for an entry", maybe_first_result->get_failure ());
   }
   auto maybe_second_result {parse_single_type (maybe_first_result->state)};
   if (!maybe_second_result)

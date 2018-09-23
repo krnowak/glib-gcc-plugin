@@ -742,7 +742,7 @@ public:
   {}
 
   /* opt_pass methods: */
-  virtual unsigned int execute (function *);
+  virtual unsigned int execute (function *) override;
 
 };
 

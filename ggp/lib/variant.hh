@@ -149,6 +149,23 @@ GGP_LIB_TRIVIAL_NEQ_OP (Entry);
 
 } // namespace VT
 
+struct VariantParseError
+{
+  std::size_t offset;
+  std::string reason;
+};
+
+template <typename ErrorT>
+struct ErrorCascade
+{
+  std::vector<ErrorT> errors;
+};
+
+using VariantParseErrorCascade = ErrorCascade<VariantParseError>;
+
+template <typename OkType>
+using VariantResult = Result<OkType, VariantParseErrorCascade>;
+
 struct VariantType
 {
   using V = std::variant
@@ -163,11 +180,9 @@ struct VariantType
   Leaf::AnyType
   >;
 
-  static std::optional<VariantType>
-  from_string (std::string_view const& string);
+  static auto from_string (std::string_view const& string) -> VariantResult<VariantType>;
 
-  bool
-  is_definite() const;
+  auto is_definite() const -> bool;
 
   V v;
 };
