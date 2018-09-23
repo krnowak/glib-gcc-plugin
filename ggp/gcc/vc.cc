@@ -187,17 +187,19 @@ void
 ggp_vc_finish_parse_function (void* gcc_data,
                               void* /* user_data */)
 {
-  dump_node (static_cast<const_tree> (gcc_data), TDF_ADDRESS, stderr);
   auto function_decl = static_cast<tree> (gcc_data);
   gcc_assert (TREE_CODE (function_decl) == FUNCTION_DECL);
+  warning (0, "Tree dump of %s",
+           IDENTIFIER_POINTER (DECL_NAME (function_decl)));
+  dump_node (function_decl, TDF_ADDRESS, stderr);
 
   auto function_body = DECL_SAVED_TREE (function_decl);
   gcc_assert (function_body);
 
   std::queue<tree> trees;
   std::vector<tree> call_exprs;
-  std::vector<CallSite> call_sites;
-  trees.push (static_cast<tree> (gcc_data));
+  std::set<tree> visited_trees;
+  trees.push (function_decl);
 
   while (!trees.empty ())
   {
@@ -209,34 +211,339 @@ ggp_vc_finish_parse_function (void* gcc_data,
       continue;
     }
 
-    switch (TREE_CODE (queued_tree))
+    if (auto [iter, inserted] {visited_trees.insert (queued_tree)}; !inserted)
     {
-    case FUNCTION_DECL:
-      trees.push (DECL_SAVED_TREE (queued_tree));
-      break;
+      continue;
+    }
 
-    case BIND_EXPR:
-      // operand 1 is a body (0 are variable declarations)
-      trees.push (TREE_OPERAND (queued_tree, 1));
+    if (TREE_CODE (queued_tree) == CALL_EXPR)
+    {
+      call_exprs.push_back (queued_tree);
+    }
+
+    if (IS_EXPR_CODE_CLASS (code_class))
+    {
+      trees.push (TREE_TYPE (queued_tree));
+
+      switch (code_class)
+      {
+      case tcc_unary:
+        trees.push (TREE_OPERAND (queued_tree, 0));
+        break;
+
+      case tcc_binary:
+      case tcc_comparison:
+        trees.push (TREE_OPERAND (queued_tree, 0));
+        trees.push (TREE_OPERAND (queued_tree, 1));
+        break;
+
+      case tcc_expression:
+      case tcc_reference:
+      case tcc_statement:
+      case tcc_vl_exp:
+        /* These nodes are handled explicitly below.  */
+        break;
+
+      default:
+        gcc_unreachable ();
+      }
+    }
+    else if (DECL_P (queued_tree))
+    {
+      /* All declarations have names.  */
+      if (DECL_NAME (t))
+      {
+        trees.push (DECL_NAME (queued_tree));
+      }
+      if (HAS_DECL_ASSEMBLER_NAME_P (queued_tree)
+          && DECL_ASSEMBLER_NAME_SET_P (queued_tree)
+          && DECL_ASSEMBLER_NAME (queued_tree) != DECL_NAME (queued_tree))
+        trees.push (DECL_ASSEMBLER_NAME (queued_tree));
+      if (DECL_ABSTRACT_ORIGIN (queued_tree))
+        trees.push (DECL_ABSTRACT_ORIGIN (queued_tree));
+      /* And types.  */
+      trees.push (TREE_TYPE (queued_tree));
+      trees.push (DECL_CONTEXT (queued_tree));
+      if (DECL_CHAIN (queued_tree))
+      {
+        trees.push (DECL_CHAIN (queued_tree));
+      }
+    }
+    else if (code_class == tcc_type)
+    {
+      /* All types have associated declarations.  */
+      trees.push (TYPE_NAME (queued_tree));
+
+      /* All types have a main variant.  */
+      if (TYPE_MAIN_VARIANT (queued_tree) != queued_tree)
+        trees.push (TYPE_MAIN_VARIANT (queued_tree));
+
+      /* And sizes.  */
+      trees.push (TYPE_SIZE (queued_tree));
+    }
+    else if (code_class == tcc_constant)
+    {
+      /* All constants can have types.  */
+      trees.push (TREE_TYPE (queued_tree));
+    }
+
+    /* Now handle the various kinds of nodes.  */
+    switch (code)
+    {
+      int i;
+
+    case TREE_LIST:
+      trees.push (TREE_PURPOSE (queued_tree));
+      trees.push (TREE_VALUE (queued_tree));
+      trees.push (TREE_CHAIN (queued_tree));
       break;
 
     case STATEMENT_LIST:
+      for (auto it = tsi_start (queued_tree);
+           !tsi_end_p (it);
+           tsi_next (&it))
       {
-        for (auto tsi = tsi_start (queued_tree); !tsi_end_p (tsi); tsi_next (&tsi))
-        {
-          trees.push (tsi_stmt (tsi));
-        }
-        break;
+        trees.push (tsi_stmt (it));
       }
+      break;
+
+    case TREE_VEC:
+      for (int i = 0; i < TREE_VEC_LENGTH (queued_tree); ++i)
+      {
+        trees.push (TREE_VEC_ELT (queued_tree, i));
+      }
+      break;
+
+    case INTEGER_TYPE:
+    case ENUMERAL_TYPE:
+      trees.push (TYPE_MIN_VALUE (queued_tree));
+      trees.push (TYPE_MAX_VALUE (queued_tree));
+
+      if (code == ENUMERAL_TYPE)
+      {
+        trees.push (TYPE_VALUES (queued_tree));
+      }
+      break;
+
+    case REAL_TYPE:
+      break;
+
+    case FIXED_POINT_TYPE:
+      break;
+
+    case POINTER_TYPE:
+      trees.push (TREE_TYPE (queued_tree));
+      break;
+
+    case REFERENCE_TYPE:
+      trees.push (TREE_TYPE (queued_tree));
+      break;
+
+    case METHOD_TYPE:
+      trees.push (TYPE_METHOD_BASETYPE (queued_tree));
+      /* Fall through.  */
+
+    case FUNCTION_TYPE:
+      trees.push (TREE_TYPE (queued_tree));
+      trees.push (TYPE_ARG_TYPES (queued_tree));
+      break;
+
+    case ARRAY_TYPE:
+      trees.push (TREE_TYPE (queued_tree));
+      trees.push (TYPE_DOMAIN (queued_tree));
+      break;
+
+    case RECORD_TYPE:
+    case UNION_TYPE:
+      trees.push (TYPE_FIELDS (queued_tree));
+      trees.push (TYPE_BINFO (queued_tree));
+      break;
+
+    case CONST_DECL:
+      trees.push (DECL_INITIAL (queued_tree));
+      break;
+
+    case DEBUG_EXPR_DECL:
+    case VAR_DECL:
+    case PARM_DECL:
+    case FIELD_DECL:
+    case RESULT_DECL:
+      if (TREE_CODE (t) == PARM_DECL)
+        trees.push (DECL_ARG_TYPE (queued_tree));
+      else
+        trees.push (DECL_INITIAL (queued_tree));
+      trees.push (DECL_SIZE (queued_tree));
+
+      if (TREE_CODE (queued_tree) == FIELD_DECL)
+      {
+        if (DECL_FIELD_OFFSET (queued_tree))
+          trees.push (bit_position (queued_tree));
+      }
+      break;
+
+    case FUNCTION_DECL:
+      trees.push (DECL_ARGUMENTS (queued_tree));
+      if (queued_tree == function_decl)
+        trees.push (DECL_SAVED_TREE (queued_tree));
+      break;
+
+    case INTEGER_CST:
+      break;
+
+    case STRING_CST:
+      break;
+
+    case REAL_CST:
+      break;
+
+    case FIXED_CST:
+      break;
+
+    case TRUTH_NOT_EXPR:
+    case ADDR_EXPR:
+    case INDIRECT_REF:
+    case CLEANUP_POINT_EXPR:
+    case SAVE_EXPR:
+    case REALPART_EXPR:
+    case IMAGPART_EXPR:
+      /* These nodes are unary, but do not have code class `1'.  */
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      break;
+
+    case TRUTH_ANDIF_EXPR:
+    case TRUTH_ORIF_EXPR:
+    case INIT_EXPR:
+    case MODIFY_EXPR:
+    case COMPOUND_EXPR:
+    case PREDECREMENT_EXPR:
+    case PREINCREMENT_EXPR:
+    case POSTDECREMENT_EXPR:
+    case POSTINCREMENT_EXPR:
+      /* These nodes are binary, but do not have code class `2'.  */
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      trees.push (TREE_OPERAND (queued_tree, 1));
+      break;
+
+    case COMPONENT_REF:
+    case BIT_FIELD_REF:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      trees.push (TREE_OPERAND (queued_tree, 1));
+      trees.push (TREE_OPERAND (queued_tree, 2));
+      break;
+
+    case ARRAY_REF:
+    case ARRAY_RANGE_REF:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      trees.push (TREE_OPERAND (queued_tree, 1));
+      trees.push (TREE_OPERAND (queued_tree, 2));
+      trees.push (TREE_OPERAND (queued_tree, 3));
+      break;
+
+    case COND_EXPR:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      trees.push (TREE_OPERAND (queued_tree, 1));
+      trees.push (TREE_OPERAND (queued_tree, 2));
+      break;
+
+    case TRY_FINALLY_EXPR:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      trees.push (TREE_OPERAND (queued_tree, 1));
+      break;
 
     case CALL_EXPR:
-      call_exprs.push_back (queued_tree);
+      {
+        tree arg;
+        call_expr_arg_iterator iter;
+        trees.push (CALL_EXPR_FN (queued_tree));
+        FOR_EACH_CALL_EXPR_ARG (arg, iter, t)
+        {
+          trees.push (arg);
+        }
+      }
+      break;
+
+    case CONSTRUCTOR:
+      {
+        unsigned HOST_WIDE_INT cnt;
+        tree index, value;
+        FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (t), cnt, index, value)
+        {
+          trees.push (index);
+          trees.push (value);
+        }
+      }
+      break;
+
+    case BIND_EXPR:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      trees.push (TREE_OPERAND (queued_tree, 1));
+      break;
+
+    case LOOP_EXPR:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      break;
+
+    case EXIT_EXPR:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      break;
+
+    case RETURN_EXPR:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      break;
+
+    case TARGET_EXPR:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      trees.push (TREE_OPERAND (queued_tree, 1));
+      trees.push (TREE_OPERAND (queued_tree, 2));
+      /* There really are two possible places the initializer can be.
+         After RTL expansion, the second operand is moved to the
+         position of the fourth operand, and the second operand
+         becomes NULL.  */
+      trees.push (TREE_OPERAND (queued_tree, 3));
+      break;
+
+    case CASE_LABEL_EXPR:
+      trees.push (CASE_LABEL (queued_tree));
+      if (CASE_LOW (t))
+      {
+        trees.push (CASE_LOW (queued_tree));
+        if (CASE_HIGH (t))
+          trees.push (CASE_HIGH (queued_tree));
+      }
+      break;
+
+    case LABEL_EXPR:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      break;
+
+    case GOTO_EXPR:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      break;
+
+    case SWITCH_EXPR:
+      trees.push (TREE_OPERAND (queued_tree, 0));
+      trees.push (TREE_OPERAND (queued_tree, 1));
+      if (TREE_OPERAND (t, 2))
+      {
+        trees.push (TREE_OPERAND (queued_tree, 2));
+      }
+      break;
+
+    case OMP_CLAUSE:
+      for (int i = 0; i < omp_clause_num_ops[OMP_CLAUSE_CODE (t)]; i++)
+      {
+        trees.push (OMP_CLAUSE_OPERAND (queued_tree, i));
+      }
       break;
 
     default:
+      /* There are no additional fields to print.  */
       break;
     }
   }
+  visited_trees.clear ();
+
+  std::vector<CallSite> call_sites;
 
   for (auto call_expr : call_exprs)
   {
@@ -264,6 +571,7 @@ ggp_vc_finish_parse_function (void* gcc_data,
       }
     }
   }
+  call_expr.clear ();
 
   for (auto call_site : call_sites)
   {
@@ -437,11 +745,39 @@ public:
 };
 
 unsigned int
-vc_cfg_pass::execute (function *)
+vc_cfg_pass::execute (function *fn)
 {
+  /*
   warning (0, "Analyze cfg of function %s",
            IDENTIFIER_POINTER (DECL_NAME (current_function_decl)));
-  gimple_dump_cfg (stderr, TDF_DETAILS | TDF_STATS | TDF_BLOCKS | TDF_ENUMERATE_LOCALS);
+  gimple_dump_cfg (stderr, TDF_DETAILS | TDF_STATS | TDF_BLOCKS | TDF_ENUMERATE_LOCALS | TDF_GRAPH | TDF_VERBOSE | TDF_GIMPLE);
+
+  gimple_stmt_iterator i;
+  auto num_gimple_stmts {0u};
+
+  for (i = gsi_start (cfun->gimple_body); !gsi_end_p (i); gsi_next (&i))
+  {
+    num_gimple_stmts++;
+  }
+
+  basic_block iter;
+  auto idx {0u};
+
+  for (iter = fn->cfg->x_entry_block_ptr; iter != NULL; iter = iter->next_bb)
+  {
+    warning (0, "Gimple debug block %u", idx++);
+    debug_gimple_seq (iter->il.gimple.seq);
+  }
+
+  if (fn->local_decls != nullptr)
+  {
+    for (auto const& t : *(fn->local_decls))
+    {
+      dump_node (t, TDF_ADDRESS, stderr);
+    }
+  }
+  */
+
   return 0;
 }
 

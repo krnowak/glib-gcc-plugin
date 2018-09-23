@@ -19,10 +19,6 @@
 #ifndef GGP_GCC_HH
 #define GGP_GCC_HH
 
-// Do not sort.
-
-#include "auto-host.h"
-
 #define INCLUDE_ALGORITHM
 #define INCLUDE_LIST
 #define INCLUDE_MAP
@@ -30,7 +26,8 @@
 #define INCLUDE_STRING
 #define INCLUDE_VECTOR
 
-#include "system.h"
+// Do not sort.
+
 #include "gcc-plugin.h"
 #include "diagnostic.h"
 #include "errors.h"
@@ -42,6 +39,9 @@
 #include "context.h"
 #include "stringpool.h"
 #include "attribs.h"
+#include "gimple.h"
+#include "gimple-pretty-print.h"
+#include "gimple-iterator.h"
 
 // system.h header includes ctype.h, which defines the macros undeffed
 // below. system.h actually indirectly undefs them and replaces them
