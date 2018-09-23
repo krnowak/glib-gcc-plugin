@@ -216,10 +216,14 @@ ggp_vc_finish_parse_function (void* gcc_data,
       continue;
     }
 
-    if (TREE_CODE (queued_tree) == CALL_EXPR)
+    auto const code {TREE_CODE (queued_tree)};
+
+    if (code == CALL_EXPR)
     {
       call_exprs.push_back (queued_tree);
     }
+
+    auto const code_class {TREE_CODE_CLASS (code)};
 
     if (IS_EXPR_CODE_CLASS (code_class))
     {
@@ -251,7 +255,7 @@ ggp_vc_finish_parse_function (void* gcc_data,
     else if (DECL_P (queued_tree))
     {
       /* All declarations have names.  */
-      if (DECL_NAME (t))
+      if (DECL_NAME (queued_tree))
       {
         trees.push (DECL_NAME (queued_tree));
       }
@@ -290,8 +294,6 @@ ggp_vc_finish_parse_function (void* gcc_data,
     /* Now handle the various kinds of nodes.  */
     switch (code)
     {
-      int i;
-
     case TREE_LIST:
       trees.push (TREE_PURPOSE (queued_tree));
       trees.push (TREE_VALUE (queued_tree));
@@ -368,13 +370,13 @@ ggp_vc_finish_parse_function (void* gcc_data,
     case PARM_DECL:
     case FIELD_DECL:
     case RESULT_DECL:
-      if (TREE_CODE (t) == PARM_DECL)
+      if (code == PARM_DECL)
         trees.push (DECL_ARG_TYPE (queued_tree));
       else
         trees.push (DECL_INITIAL (queued_tree));
       trees.push (DECL_SIZE (queued_tree));
 
-      if (TREE_CODE (queued_tree) == FIELD_DECL)
+      if (code == FIELD_DECL)
       {
         if (DECL_FIELD_OFFSET (queued_tree))
           trees.push (bit_position (queued_tree));
@@ -455,7 +457,7 @@ ggp_vc_finish_parse_function (void* gcc_data,
         tree arg;
         call_expr_arg_iterator iter;
         trees.push (CALL_EXPR_FN (queued_tree));
-        FOR_EACH_CALL_EXPR_ARG (arg, iter, t)
+        FOR_EACH_CALL_EXPR_ARG (arg, iter, queued_tree)
         {
           trees.push (arg);
         }
@@ -466,7 +468,7 @@ ggp_vc_finish_parse_function (void* gcc_data,
       {
         unsigned HOST_WIDE_INT cnt;
         tree index, value;
-        FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (t), cnt, index, value)
+        FOR_EACH_CONSTRUCTOR_ELT (CONSTRUCTOR_ELTS (queued_tree), cnt, index, value)
         {
           trees.push (index);
           trees.push (value);
@@ -504,10 +506,10 @@ ggp_vc_finish_parse_function (void* gcc_data,
 
     case CASE_LABEL_EXPR:
       trees.push (CASE_LABEL (queued_tree));
-      if (CASE_LOW (t))
+      if (CASE_LOW (queued_tree))
       {
         trees.push (CASE_LOW (queued_tree));
-        if (CASE_HIGH (t))
+        if (CASE_HIGH (queued_tree))
           trees.push (CASE_HIGH (queued_tree));
       }
       break;
@@ -523,14 +525,14 @@ ggp_vc_finish_parse_function (void* gcc_data,
     case SWITCH_EXPR:
       trees.push (TREE_OPERAND (queued_tree, 0));
       trees.push (TREE_OPERAND (queued_tree, 1));
-      if (TREE_OPERAND (t, 2))
+      if (TREE_OPERAND (queued_tree, 2))
       {
         trees.push (TREE_OPERAND (queued_tree, 2));
       }
       break;
 
     case OMP_CLAUSE:
-      for (int i = 0; i < omp_clause_num_ops[OMP_CLAUSE_CODE (t)]; i++)
+      for (int i = 0; i < omp_clause_num_ops[OMP_CLAUSE_CODE (queued_tree)]; i++)
       {
         trees.push (OMP_CLAUSE_OPERAND (queued_tree, i));
       }
@@ -571,7 +573,7 @@ ggp_vc_finish_parse_function (void* gcc_data,
       }
     }
   }
-  call_expr.clear ();
+  call_exprs.clear ();
 
   for (auto call_site : call_sites)
   {
@@ -745,7 +747,7 @@ public:
 };
 
 unsigned int
-vc_cfg_pass::execute (function *fn)
+vc_cfg_pass::execute (function */*fn*/)
 {
   /*
   warning (0, "Analyze cfg of function %s",
