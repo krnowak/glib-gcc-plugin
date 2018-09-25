@@ -42,7 +42,7 @@ struct ParseState
 
 auto ParseState::take_one () -> std::optional<char>
 {
-  if (this->offset < this->string.length())
+  if (this->offset < this->string.size())
   {
     auto c {this->string[this->offset]};
 
@@ -66,7 +66,7 @@ auto ParseState::take_back () -> void
 
 auto ParseState::get_rest () -> std::string_view
 {
-  if (this->offset < this->string.length())
+  if (this->offset < this->string.size())
   {
     return this->string.substr (this->offset);
   }
@@ -87,9 +87,9 @@ auto ParseState::error (std::string reason, VariantParseErrorCascade& error) -> 
 
   using std::swap;
 
-  swap (error, e);
-
-  e.errors.emplace_back(this->offset, std::move (reason));
+  e.errors.swap (error.errors);
+  auto parse_error {VariantParseError{this->offset, std::move (reason)}};
+  e.errors.emplace_back(std::move (parse_error));
 
   return e;
 }
@@ -110,46 +110,46 @@ parse_leaf_basic (ParseState state) -> VariantResult<ParseLeafBasicResult>
 
   if (!maybe_c)
   {
-    return {state.error ("expected basic type, got premature end of a string")};
+    return {{state.error ("expected basic type, got premature end of a string")}};
   }
 
   switch (*maybe_c)
   {
   case 'b':
-    return {{{Leaf::bool_}, state}};
+    return {{ParseLeafBasicResult{{Leaf::bool_}, state}}};
   case 'y':
-    return {{{Leaf::byte_}, state}};
+    return {{ParseLeafBasicResult{{Leaf::byte_}, state}}};
   case 'n':
-    return {{{Leaf::i16}, state}};
+    return {{ParseLeafBasicResult{{Leaf::i16}, state}}};
   case 'q':
-    return {{{Leaf::u16}, state}};
+    return {{ParseLeafBasicResult{{Leaf::u16}, state}}};
   case 'i':
-    return {{{Leaf::i32}, state}};
+    return {{ParseLeafBasicResult{{Leaf::i32}, state}}};
   case 'u':
-    return {{{Leaf::u32}, state}};
+    return {{ParseLeafBasicResult{{Leaf::u32}, state}}};
   case 'x':
-    return {{{Leaf::i64}, state}};
+    return {{ParseLeafBasicResult{{Leaf::i64}, state}}};
   case 't':
-    return {{{Leaf::u64}, state}};
+    return {{ParseLeafBasicResult{{Leaf::u64}, state}}};
   case 'h':
-    return {{{Leaf::handle}, state}};
+    return {{ParseLeafBasicResult{{Leaf::handle}, state}}};
   case 'd':
-    return {{{Leaf::double_}, state}};
+    return {{ParseLeafBasicResult{{Leaf::double_}, state}}};
   case 's':
-    return {{{Leaf::string_}, state}};
+    return {{ParseLeafBasicResult{{Leaf::string_}, state}}};
   case 'o':
-    return {{{Leaf::object_path}, state}};
+    return {{ParseLeafBasicResult{{Leaf::object_path}, state}}};
   case 'g':
-    return {{{Leaf::signature}, state}};
+    return {{ParseLeafBasicResult{{Leaf::signature}, state}}};
   case '?':
-    return {{{Leaf::any_basic}, state}};
+    return {{ParseLeafBasicResult{{Leaf::any_basic}, state}}};
   default:
     {
       std::ostringstream oss;
 
       oss << "expected basic type, got '" << *maybe_c << "'";
 
-      return {state->error (oss.str())};
+      return {{state.error (oss.str())}};
     }
   }
 }
@@ -165,31 +165,31 @@ auto parse_entry_type (ParseState state) -> VariantResult<ParseEntryTypeResult>
   auto maybe_first_result {parse_leaf_basic (state)};
   if (!maybe_first_result)
   {
-    return state->error ("failed to parse first type for an entry", maybe_first_result->get_failure ());
+    return {{state.error ("failed to parse first type for an entry", maybe_first_result.get_failure ())}};
   }
   auto maybe_second_result {parse_single_type (maybe_first_result->state)};
   if (!maybe_second_result)
   {
-    /* failed to parse second type for an entry: <reason> */
-    return {};
+    return {{state.error ("failed to parse second type for an entry", maybe_second_result.get_failure ())}};
   }
   auto maybe_c {maybe_second_result->state.take_one ()};
   if (!maybe_c)
   {
-    /* expected '}', got premature end of a string */
-    return {};
+    return {{state.error ("expected '}', got premature end of a string")}};
   }
   if (*maybe_c != '}')
   {
-    /* expected '}', got X */
-    return {};
+    std::ostringstream oss;
+
+    oss << "expected '}', got " << *maybe_c;
+    return {{state.error (oss.str ())}};
   }
-  return {{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->state}};
+  return {{ParseEntryTypeResult{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->state}}};
 }
 
 using ParseTupleTypeResult = ParseResult<VT::Tuple>;
 
-auto parse_tuple_type (ParseState state) -> std::optional<ParseTupleTypeResult>
+auto parse_tuple_type (ParseState state) -> VariantResult<ParseTupleTypeResult>
 {
   std::vector<VariantType> types {};
   for (;;)
@@ -197,32 +197,32 @@ auto parse_tuple_type (ParseState state) -> std::optional<ParseTupleTypeResult>
     auto maybe_c {state.take_one ()};
     if (!maybe_c)
     {
-      /* expected either a type or ')', got premature end of a string */
-      return {};
+      return {{state.error ("expected either a type or ')', got premature end of a string")}};
     }
     if (*maybe_c == ')')
     {
-      return {{{std::move (types)}, state}};
+      return {{ParseTupleTypeResult{std::move (types), state}}};
     }
     state.take_back ();
     auto maybe_result {parse_single_type (state)};
     if (!maybe_result)
     {
-      /* failed to parse Nth type of a tuple: <reason> */
-      return {};
+      std::ostringstream oss;
+
+      oss << "failed to parse type number " << types.size() + 1 << " of a tuple";
+      return {{state.error (oss.str(), maybe_result.get_failure ())}};
     }
     state = std::move (maybe_result->state);
     types.push_back (std::move (maybe_result->parsed));
   }
 }
 
-auto parse_single_type (ParseState state) -> std::optional<ParseTypeResult>
+auto parse_single_type (ParseState state) -> VariantResult<ParseTypeResult>
 {
   auto maybe_c {state.take_one ()};
   if (!maybe_c)
   {
-    /* expected a type, got premature end of a string */
-    return {};
+    return {{state.error ("expected a type, got premature end of a string")}};
   }
 
   switch (*maybe_c)
@@ -232,47 +232,43 @@ auto parse_single_type (ParseState state) -> std::optional<ParseTypeResult>
       auto maybe_result {parse_entry_type (state)};
       if (!maybe_result)
       {
-        /* failed to parse entry type: <reason> */
-        return {};
+        return {{state.error ("failed to parse entry type", maybe_result.get_failure ())}};
       }
-      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
+      return {{ParseTypeResult{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
     }
   case '(':
     {
       auto maybe_result {parse_tuple_type (state)};
       if (!maybe_result)
       {
-        /* failed to parse tuple type: <reason> */
-        return {};
+        return {{state.error ("failed to parse tuple type", maybe_result.get_failure ())}};
       }
-      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
+      return {{ParseTypeResult{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
     }
   case 'm':
     {
       auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
-        /* failed to parse maybe type: <reason> */
-        return {};
+        return {{state.error ("failed to parse maybe type", maybe_result.get_failure ())}};
       }
-      return {{{{VT::Maybe {std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}};
+      return {{ParseTypeResult{{VT::Maybe {std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}}};
     }
   case 'a':
     {
       auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
-        /* failed to parse array type: <reason> */
-        return {};
+        return {{state.error ("failed to parse array type", maybe_result.get_failure ())}};
       }
-      return {{{{VT::Array {std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}};
+      return {{ParseTypeResult{{VT::Array {std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}}};
     }
   case '*':
-    return {{{{Leaf::any_type}}, std::move (state)}};
+    return {{ParseTypeResult{{Leaf::any_type}, std::move (state)}}};
   case 'r':
-    return {{{{Leaf::any_tuple}}, std::move (state)}};
+    return {{ParseTypeResult{{Leaf::any_tuple}, std::move (state)}}};
   case 'v':
-    return {{{{Leaf::variant}}, std::move (state)}};
+    return {{ParseTypeResult{{Leaf::variant}, std::move (state)}}};
   default:
     {
       state.take_back();
@@ -281,18 +277,20 @@ auto parse_single_type (ParseState state) -> std::optional<ParseTypeResult>
 
       if (!maybe_result)
       {
-        /* failed to parse type, expected '{', '(', 'm', 'a', '*', 'r', 'v' or a basic type, got X */
-        return {};
+        std::ostringstream oss;
+
+        oss << "failed to parse type, expected '{', '(', 'm', 'a', '*', 'r', 'v' or a basic type, got " << *maybe_c;
+        return {{state.error (oss.str())}};
       }
 
-      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
+      return {{ParseTypeResult{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
     }
   }
 }
 
 } // anonymous namespace
 
-/* static */ std::optional<VariantType>
+/* static */ VariantResult<VariantType>
 VariantType::from_string (std::string_view const& string)
 {
   auto state {ParseState{string, 0}};
@@ -300,13 +298,14 @@ VariantType::from_string (std::string_view const& string)
 
   if (!maybe_result)
   {
-    /* failed to parse variant type: <reason> */
-    return {};
+    return {{state.error ("failed to parse variant type", maybe_result.get_failure ())}};
   }
   if (auto rest {maybe_result->state.get_rest()}; !rest.empty ())
   {
-    /* string contains more than one complete type: <rest> */
-    return {};
+    std::ostringstream oss;
+
+    oss << "string contains more than one complete type: " << rest;
+    return {{maybe_result->state.error(oss.str())}};
   }
 
   return {std::move (maybe_result->parsed)};

@@ -10,7 +10,14 @@ namespace
 std::optional<VariantType>
 vtfs (char const* str)
 {
-  return VariantType::from_string (str);
+  auto v {VariantType::from_string (str)};
+
+  if (v)
+  {
+    return {std::move (*v)};
+  }
+
+  return {};
 }
 
 template <typename T>

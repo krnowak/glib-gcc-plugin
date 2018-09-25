@@ -233,9 +233,9 @@ struct Result
     return std::visit (vh, this->v);
   }
 
-  explicit operator bool () const noexcept()
+  explicit operator bool () const noexcept
   {
-    return this->v.holds_alternative<OkType> ();
+    return std::holds_alternative<OkType>(this->v);
   }
 
   auto operator->() const -> OkType const*
