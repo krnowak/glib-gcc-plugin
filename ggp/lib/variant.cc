@@ -378,36 +378,40 @@ namespace
 
 using ParsePointerFormatResult = ParseResult<VF::Pointer>;
 
-auto parse_pointer_format (ParseState state) -> std::optional<ParsePointerFormatResult>
+auto parse_pointer_format (ParseState state) -> VariantResult<ParsePointerFormatResult>
 {
   auto maybe_c {state.take_one ()};
   if (!maybe_c)
   {
-    /* expected pointer type, got premature end of a string */
-    return {};
+    return {{state.error ("expected pointer format, got premature end of a string")}};
   }
   switch (*maybe_c)
   {
   case 's':
-    return {{{{Leaf::string_}}, std::move (state)}};
+    return {{ParsePointerFormatResult{{Leaf::string_}, std::move (state)}}};
   case 'o':
-    return {{{{Leaf::object_path}}, std::move (state)}};
+    return {{ParsePointerFormatResult{{Leaf::object_path}, std::move (state)}}};
   case 'g':
-    return {{{{Leaf::signature}}, std::move (state)}};
+    return {{ParsePointerFormatResult{{Leaf::signature}, std::move (state)}}};
   default:
-    /* expected 's' or 'o' or 'g', got X */
-    return {};
+    {
+      std::ostringstream oss;
+
+      oss << "expected 's' or 'o' or 'g', got '" << *maybe_c << "'";
+
+      return {{state.error (oss.str())}};
+    }
   }
 }
 
 using ParseBasicFormatResult = ParseResult<VF::BasicFormat>;
 
-auto parse_basic_format (ParseState state) -> std::optional<ParseBasicFormatResult>
+auto parse_basic_format (ParseState state) -> VariantResult<ParseBasicFormatResult>
 {
   auto maybe_c {state.take_one ()};
   if (!maybe_c)
   {
-    return {};
+    return {{state.error ("expected basic format, got premature end of a string")}};
   }
   switch (*maybe_c)
   {
@@ -416,18 +420,18 @@ auto parse_basic_format (ParseState state) -> std::optional<ParseBasicFormatResu
       auto maybe_result {parse_leaf_basic (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error ("failed to parse basic format", maybe_result.get_failure ())}};
       }
-      return {{{{VF::AtBasicType {std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}};
+      return {{ParseBasicFormatResult{{VF::AtBasicType {std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}}};
     }
   case '&':
     {
       auto maybe_result {parse_pointer_format (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error ("failed to parse basic format", maybe_result.get_failure ())}};
       }
-      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
+      return {{ParseBasicFormatResult{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
     }
   default:
     {
@@ -435,22 +439,25 @@ auto parse_basic_format (ParseState state) -> std::optional<ParseBasicFormatResu
       auto maybe_result {parse_leaf_basic (state)};
       if (!maybe_result)
       {
-        return {};
+        std::ostringstream oss;
+
+        oss << "failed to parse basic format, expected '@', '&' or a basic type, got " << *maybe_c;
+        return {{state.error (oss.str())}};
       }
-      return {{{{std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
+      return {{ParseBasicFormatResult{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
     }
   }
 }
 
 using ParseConvenienceFormatResult = ParseResult<VF::Convenience>;
 
-auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenienceFormatResult>
+auto parse_convenience_format (ParseState state) -> VariantResult<ParseConvenienceFormatResult>
 {
   auto maybe_c {state.take_one ()};
 
   if (!maybe_c)
   {
-    return {};
+    return {{state.error ("expected convenience format, got premature end of a string")}};
   }
 
   switch (*maybe_c)
@@ -462,7 +469,7 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
 
       if (!maybe_c)
       {
-        return {};
+        return {{state.error ("expected convenience format, got premature end of a string in the middle for the format")}};
       }
 
       switch (*maybe_c)
@@ -474,7 +481,7 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
 
           if (!maybe_c)
           {
-            return {};
+            return {{state.error ("expected convenience format, got premature end of a string in the middle for the format")}};
           }
 
           switch (*maybe_c)
@@ -486,7 +493,7 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
 
               if (!maybe_c)
               {
-                return {};
+                return {{state.error ("expected convenience format, got premature end of a string in the middle for the format")}};
               }
 
               switch (*maybe_c)
@@ -495,7 +502,13 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
               case 'y':
                 return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::constant}}}, state}};
               default:
-                return {};
+                {
+                  std::ostringstream oss;
+
+                  oss << "expected 'y', got '" << *maybe_c << "'";
+
+                  return {{state.error (oss.str ())}};
+                }
               }
             }
             // a&o
@@ -505,7 +518,13 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
           case 's':
             return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::constant}}}, state}};
           default:
-            return {};
+            {
+              std::ostringstream oss;
+
+              oss << "expected 'o' or 's', got '" << *maybe_c << "'";
+
+              return {{state.error (oss.str ())}};
+            }
           }
         }
         // aa
@@ -515,7 +534,7 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
 
           if (!maybe_c)
           {
-            return {};
+            return {{state.error ("expected convenience format, got premature end of a string in the middle for the format")}};
           }
 
           switch (*maybe_c)
@@ -524,7 +543,13 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
           case 'y':
             return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
           default:
-            return {};
+            {
+              std::ostringstream oss;
+
+              oss << "expected 'y', got '" << *maybe_c << "'";
+
+              return {{state.error (oss.str ())}};
+            }
           }
         }
         // as
@@ -537,7 +562,13 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
       case 'y':
         return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::duplicated}}}, state}};
       default:
-        return {};
+        {
+          std::ostringstream oss;
+
+          oss << "expected 's', 'o' or 'y', got '" << *maybe_c << "'";
+
+          return {{state.error (oss.str ())}};
+        }
       }
     }
     // &
@@ -547,7 +578,7 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
 
       if (!maybe_c)
       {
-        return {};
+        return {{state.error ("expected convenience format, got premature end of a string in the middle for the format")}};
       }
 
       switch (*maybe_c)
@@ -559,7 +590,7 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
 
           if (!maybe_c)
           {
-            return {};
+            return {{state.error ("expected convenience format, got premature end of a string in the middle for the format")}};
           }
 
           switch (*maybe_c)
@@ -568,24 +599,42 @@ auto parse_convenience_format (ParseState state) -> std::optional<ParseConvenien
           case 'y':
             return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::constant}}}, state}};
           default:
-            return {};
+            {
+              std::ostringstream oss;
+
+              oss << "expected 'y', got '" << *maybe_c << "'";
+
+              return {{state.error (oss.str ())}};
+            }
           }
         }
       default:
-        return {};
+        {
+          std::ostringstream oss;
+
+          oss << "expected 'a', got '" << *maybe_c << "'";
+
+          return {{state.error (oss.str ())}};
+        }
       }
     }
   default:
-    return {};
+    {
+      std::ostringstream oss;
+
+      oss << "expected 'a' or '&', got '" << *maybe_c << "'";
+
+      return {{state.error (oss.str ())}};
+    }
   }
 }
 
 using ParseTupleFormat = ParseResult<VF::Tuple>;
 using ParseFormatResult = ParseResult<VariantFormat>;
 
-auto parse_single_format (ParseState state) -> std::optional<ParseFormatResult>;
+auto parse_single_format (ParseState state) -> VariantResult<ParseFormatResult>;
 
-auto parse_tuple_format (ParseState state) -> std::optional<ParseTupleFormat>
+auto parse_tuple_format (ParseState state) -> VariantResult<ParseTupleFormat>
 {
   std::vector<VariantFormat> formats {};
 
@@ -594,17 +643,19 @@ auto parse_tuple_format (ParseState state) -> std::optional<ParseTupleFormat>
     auto maybe_c {state.take_one ()};
     if (!maybe_c)
     {
-      return {};
+      return {{state.error ("expected either a format or ')', got premature end of a string")}};
     }
     if (*maybe_c == ')')
     {
-      ParseTupleFormat f {{std::move (formats)}, state};
-      return {std::move (f)};
+      return {{ParseTupleFormat{std::move (formats), state}}};
     }
     auto maybe_result {parse_single_format (state)};
     if (!maybe_result)
     {
-      return {};
+      std::ostringstream oss;
+
+      oss << "failed to parse format number " << types.size() + 1 << " of a tuple";
+      return {{state.error (oss.str(), maybe_result.get_failure ())}};
     }
     state = std::move (maybe_result->state);
     formats.push_back (std::move (maybe_result->parsed));
@@ -613,38 +664,41 @@ auto parse_tuple_format (ParseState state) -> std::optional<ParseTupleFormat>
 
 using ParseEntryFormatResult = ParseResult<VF::Entry>;
 
-auto parse_entry_format (ParseState state) -> std::optional<ParseEntryFormatResult>
+auto parse_entry_format (ParseState state) -> VariantResult<ParseEntryFormatResult>
 {
   auto maybe_first_result {parse_basic_format (state)};
   if (!maybe_first_result)
   {
-    return {};
+    return {{state.error ("failed to parse first format for an entry", maybe_first_result.get_failure ())}};
   }
   auto maybe_second_result {parse_single_format (maybe_first_result->state)};
   if (!maybe_second_result)
   {
-    return {};
+    return {{state.error ("failed to parse second format for an entry", maybe_second_result.get_failure ())}};
   }
   auto maybe_c {maybe_second_result->state.take_one()};
   if (!maybe_c)
   {
-    return {};
+    return {{state.error ("expected '}', got premature end of a string")}};
   }
   if (*maybe_c != '}')
   {
-    return {};
+    std::ostringstream oss;
+
+    oss << "expected '}', got " << *maybe_c;
+    return {{state.error (oss.str ())}};
   }
-  return {{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->state}};
+  return {{ParseEntryFormatResult{{std::move (maybe_first_result->parsed), std::move (maybe_second_result->parsed)}, maybe_second_result->state}}};
 }
 
 using ParseMaybeFormatResult = ParseResult<VF::Maybe>;
 
-auto parse_maybe_format (ParseState state) -> std::optional<ParseMaybeFormatResult>
+auto parse_maybe_format (ParseState state) -> VariantResult<ParseMaybeFormatResult>
 {
   auto maybe_c {state.take_one()};
   if (!maybe_c)
   {
-    return {};
+    return {{state.error ("expected either a maybe format, got premature end of a string")}};
   }
   switch (*maybe_c)
   {
@@ -654,42 +708,42 @@ auto parse_maybe_format (ParseState state) -> std::optional<ParseMaybeFormatResu
       auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error("failed to parse maybe array format", maybe_result.get_failure ())}};
       }
-      return {{{{VF::MaybePointer {{VT::Array {{std::move (maybe_result->parsed)}}}}}}, std::move (maybe_result->state)}};
+      return {{ParseMaybeFormatResult{{VF::MaybePointer {{VT::Array {{std::move (maybe_result->parsed)}}}}}, std::move (maybe_result->state)}}};
     }
   case '@':
     {
       auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error("failed to parse maybe format", maybe_result.get_failure ())}};
       }
-      return {{{{VF::MaybePointer {{VF::AtVariantType {std::move (maybe_result->parsed)}}}}}, std::move (maybe_result->state)}};
+      return {{ParseMaybeFormatResult{{VF::MaybePointer {{VF::AtVariantType {std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}}};
     }
   case 'v':
-    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::variant}}}}}}, std::move (state)}};
+    return {{ParseMaybeFormatResult{{VF::MaybePointer {{VF::AtVariantType {{Leaf::variant}}}}}, std::move (state)}}};
   case '*':
-    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_type}}}}}}, std::move (state)}};
+    return {{ParseMaybeFormatResult{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_type}}}}}, std::move (state)}}};
   case 'r':
-    return {{{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_tuple}}}}}}, std::move (state)}};
+    return {{ParseMaybeFormatResult{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_tuple}}}}}, std::move (state)}}};
   case '&':
     {
       auto maybe_result {parse_pointer_format (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error("failed to parse maybe format", maybe_result.get_failure ())}};
       }
-      return {{{{VF::MaybePointer {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}};
+      return {{ParseMaybeFormatResult{{VF::MaybePointer {{std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}}};
     }
   case '^':
     {
       auto maybe_result {parse_convenience_format (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error("failed to parse maybe convenience format", maybe_result.get_failure ())}};
       }
-      return {{{{VF::MaybePointer {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}};
+      return {{ParseMaybeFormatResult{{VF::MaybePointer {{std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}}};
     }
     // bool maybes
   case '{':
@@ -697,27 +751,27 @@ auto parse_maybe_format (ParseState state) -> std::optional<ParseMaybeFormatResu
       auto maybe_result {parse_entry_format (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error("failed to parse maybe entry format", maybe_result.get_failure ())}};
       }
-      return {{{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}};
+      return {{ParseMaybeFormatResult{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}}};
     }
   case '(':
     {
       auto maybe_result {parse_tuple_format (std::move (state))};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error("failed to parse maybe tuple format", maybe_result.get_failure ())}};
       }
-      return {{{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}};
+      return {{ParseMaybeFormatResult{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}}};
     }
   case 'm':
     {
       auto maybe_result {parse_maybe_format (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error("failed to parse maybe maybe format", maybe_result.get_failure ())}};
       }
-      return {{{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}};
+      return {{ParseMaybeFormatResult{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}}};
     }
     // basic maybes, need to decide whether a pointer or bool
   default:
@@ -726,7 +780,7 @@ auto parse_maybe_format (ParseState state) -> std::optional<ParseMaybeFormatResu
       auto maybe_result {parse_leaf_basic (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error("expected 'a', '@', 'v', '*', 'r', '&', '^', '{', '(', 'm' or a basic type", maybe_result.get_failure ())}};
       }
       auto vh {VisitHelper {
         [](Leaf::String const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
@@ -744,17 +798,17 @@ auto parse_maybe_format (ParseState state) -> std::optional<ParseMaybeFormatResu
         [](Leaf::Handle const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
         [](Leaf::Double const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
       }};
-      return {{std::visit (vh, maybe_result->parsed.v), std::move (maybe_result->state)}};
+      return {{ParseMaybeFormatResult{std::visit (vh, maybe_result->parsed.v), std::move (maybe_result->state)}}};
     }
   }
 }
 
-auto parse_single_format (ParseState state) -> std::optional<ParseFormatResult>
+auto parse_single_format (ParseState state) -> VariantResult<ParseFormatResult>
 {
   auto maybe_c {state.take_one ()};
   if (!maybe_c)
   {
-    return {};
+    return {{state.error ("expected a format, got premature end of a string")}};
   }
 
   switch (*maybe_c)
@@ -764,69 +818,69 @@ auto parse_single_format (ParseState state) -> std::optional<ParseFormatResult>
       auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error ("failed to parse array format", maybe_result.get_failure ())}};
       }
-      return {{{VT::Array {std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
+      return {{ParseFormatResult{VT::Array {std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
     }
   case '@':
     {
       auto maybe_result {parse_single_type (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error ("failed to parse at format", maybe_result.get_failure ())}};
       }
-      return {{{VF::AtVariantType {std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}};
+      return {{ParseFormatResult{VF::AtVariantType {std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
     }
   case 'v':
-    return {{{VF::AtVariantType {Leaf::variant}}, std::move (state)}};
+    return {{ParseFormatResult{VF::AtVariantType {Leaf::variant}, std::move (state)}}};
   case 'r':
-    return {{{VF::AtVariantType {Leaf::any_tuple}}, std::move (state)}};
+    return {{ParseFormatResult{VF::AtVariantType {Leaf::any_tuple}, std::move (state)}}};
   case '*':
-    return {{{VF::AtVariantType {Leaf::any_type}}, std::move (state)}};
+    return {{ParseFormatResult{VF::AtVariantType {Leaf::any_type}, std::move (state)}}};
   case '&':
     {
       auto maybe_result {parse_pointer_format (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error ("failed to parse pointer format", maybe_result.get_failure ())}};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
+      return {{ParseFormatResult{std::move (maybe_result->parsed), std::move (maybe_result->state)}}};
     }
   case '^':
     {
       auto maybe_result {parse_convenience_format (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error ("failed to parse convenience format", maybe_result.get_failure ())}};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
+      return {{ParseFormatResult{std::move (maybe_result->parsed), std::move (maybe_result->state)}}};
     }
   case 'm':
     {
       auto maybe_result {parse_maybe_format (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error ("failed to parse maybe format", maybe_result.get_failure ())}};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
+      return {{ParseFormatResult{std::move (maybe_result->parsed), std::move (maybe_result->state)}}};
     }
   case '(':
     {
       auto maybe_result {parse_tuple_format (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error ("failed to parse tuple format", maybe_result.get_failure ())}};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
+      return {{ParseFormatResult{std::move (maybe_result->parsed), std::move (maybe_result->state)}}};
     }
   case '{':
     {
       auto maybe_result {parse_entry_format (state)};
       if (!maybe_result)
       {
-        return {};
+        return {{state.error ("failed to parse entry format", maybe_result.get_failure ())}};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
+      return {{ParseFormatResult{std::move (maybe_result->parsed), std::move (maybe_result->state)}}};
     }
   default:
     {
@@ -834,28 +888,34 @@ auto parse_single_format (ParseState state) -> std::optional<ParseFormatResult>
       auto maybe_result {parse_leaf_basic (state)};
       if (!maybe_result)
       {
-        return {};
+        std::ostringstream oss;
+
+        oss << "failed to parse type, expected 'a', '@', 'v', 'r', '*', '&', '^', 'm', '(', '{' or a basic type, got " << *maybe_c;
+        return {{state.error (oss.str())}};
       }
-      return {{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}};
+      return {{ParseFormatResult{std::move (maybe_result->parsed), std::move (maybe_result->state)}}};
     }
   }
 }
 
 } // anonymous namespace
 
-/* static */ std::optional<VariantFormat>
-VariantFormat::from_string (std::string_view const& string)
+/* static */ auto
+VariantFormat::from_string (std::string_view const& string) -> VariantResult<VariantFormat>
 {
   auto state {ParseState{string, 0}};
   auto maybe_result {parse_single_format (state)};
 
   if (!maybe_result)
   {
-    return {};
+    return {{state.error ("failed to parse variant format", maybe_result.get_failure ())}};
   }
   if (auto rest {maybe_result->state.get_rest ()}; !rest.empty ())
   {
-    return {};
+    std::ostringstream oss;
+
+    oss << "string contains more than one complete format: " << rest;
+    return {{maybe_result->state.error(oss.str())}};
   }
 
   return {std::move (maybe_result->parsed)};

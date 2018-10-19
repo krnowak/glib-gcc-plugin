@@ -372,11 +372,9 @@ struct VariantFormat
   VF::Entry
   >;
 
-  static std::optional<VariantFormat>
-  from_string (std::string_view const& string);
+  static auto from_string (std::string_view const& string) -> VariantResult<VariantFormat>;
 
-  VariantType
-  to_type () const;
+  auto to_type () const -> VariantType;
 
   V v;
 };
