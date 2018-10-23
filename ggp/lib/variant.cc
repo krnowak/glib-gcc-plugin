@@ -500,7 +500,7 @@ auto parse_convenience_format (ParseState state) -> VariantResult<ParseConvenien
               {
                 // a&ay
               case 'y':
-                return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::constant}}}, state}};
+                return {{ParseConvenienceFormatResult{{{VF::Convenience::Type::byte_string_array}, {VF::Convenience::Kind::constant}}, state}}};
               default:
                 {
                   std::ostringstream oss;
@@ -513,10 +513,10 @@ auto parse_convenience_format (ParseState state) -> VariantResult<ParseConvenien
             }
             // a&o
           case 'o':
-            return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::constant}}}, state}};
+            return {{ParseConvenienceFormatResult{{{VF::Convenience::Type::object_path_array}, {VF::Convenience::Kind::constant}}, state}}};
             // a&s
           case 's':
-            return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::constant}}}, state}};
+            return {{ParseConvenienceFormatResult{{{VF::Convenience::Type::string_array}, {VF::Convenience::Kind::constant}}, state}}};
           default:
             {
               std::ostringstream oss;
@@ -541,7 +541,7 @@ auto parse_convenience_format (ParseState state) -> VariantResult<ParseConvenien
           {
             // aay
           case 'y':
-            return {{{{{VF::Convenience::Type::byte_string_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+            return {{ParseConvenienceFormatResult{{{VF::Convenience::Type::byte_string_array}, {VF::Convenience::Kind::duplicated}}, state}}};
           default:
             {
               std::ostringstream oss;
@@ -554,13 +554,13 @@ auto parse_convenience_format (ParseState state) -> VariantResult<ParseConvenien
         }
         // as
       case 's':
-        return {{{{{VF::Convenience::Type::string_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+        return {{ParseConvenienceFormatResult{{{VF::Convenience::Type::string_array}, {VF::Convenience::Kind::duplicated}}, state}}};
         // ao
       case 'o':
-        return {{{{{VF::Convenience::Type::object_path_array}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+        return {{ParseConvenienceFormatResult{{{VF::Convenience::Type::object_path_array}, {VF::Convenience::Kind::duplicated}}, state}}};
         // ay
       case 'y':
-        return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::duplicated}}}, state}};
+        return {{ParseConvenienceFormatResult{{{VF::Convenience::Type::byte_string}, {VF::Convenience::Kind::duplicated}}, state}}};
       default:
         {
           std::ostringstream oss;
@@ -597,7 +597,7 @@ auto parse_convenience_format (ParseState state) -> VariantResult<ParseConvenien
           {
             // &ay
           case 'y':
-            return {{{{{VF::Convenience::Type::byte_string}}, {{VF::Convenience::Kind::constant}}}, state}};
+            return {{ParseConvenienceFormatResult{{{VF::Convenience::Type::byte_string}, {VF::Convenience::Kind::constant}}, state}}};
           default:
             {
               std::ostringstream oss;
@@ -654,7 +654,7 @@ auto parse_tuple_format (ParseState state) -> VariantResult<ParseTupleFormat>
     {
       std::ostringstream oss;
 
-      oss << "failed to parse format number " << types.size() + 1 << " of a tuple";
+      oss << "failed to parse format number " << formats.size() + 1 << " of a tuple";
       return {{state.error (oss.str(), maybe_result.get_failure ())}};
     }
     state = std::move (maybe_result->state);

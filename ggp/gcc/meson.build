@@ -7,6 +7,8 @@ ggp_gcc_sources = [
   'plugin.cc',
   'tc.cc',
   'tc.hh',
+  'tree.cc',
+  'tree.hh',
   'util.cc',
   'util.hh',
   'vc.cc',

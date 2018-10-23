@@ -128,7 +128,14 @@ namespace
 std::optional<VariantFormat>
 vffs (char const* str)
 {
-  return VariantFormat::from_string (str);
+  auto v {VariantFormat::from_string (str)};
+
+  if (v)
+  {
+    return {std::move (*v)};
+  }
+
+  return {};
 }
 
 template <typename T>

@@ -3,6 +3,7 @@ subdir('generated')
 test_sources = [
     'main.cc',
     'variant-test.cc',
+    'type-test.cc',
 ]
 
 test_lib = executable('variant-test',
