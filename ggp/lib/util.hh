@@ -79,6 +79,18 @@
                                                             \
   GGP_LIB_VARIANT_OPS (Type)
 
+#define GGP_LIB_STRUCT_FIELDS(FieldType, FieldName, ...)  \
+  FieldType FieldName;                                    \
+  GGP_LIB_STRUCT_FIELDS(__VA_ARGS__)
+
+#define GGP_LIB_STRUCT(Type, ...)               \
+  struct Type                                   \
+  {                                             \
+  GGP_LIB_STRUCT_FIELDS(__VA_ARGS__);           \
+  };                                            \
+                                                \
+  GGP_LIB_STRUCT_EQ_OPS(Type, __VA_ARGS__)
+
 namespace Ggp::Lib
 {
 

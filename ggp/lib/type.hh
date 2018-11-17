@@ -55,19 +55,11 @@ struct Real
   std::uint8_t size_in_bytes;
 };
 
-struct VariantTypeUnspecified
-{};
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS(VariantTypeUnspecified);
 
-struct TypeInfo
-{
-  using V = std::variant
-    <
-    VariantTypeUnspecified,
-    VariantType
-    >;
-
-  V v;
-};
+GGP_LIB_VARIANT_STRUCT(TypeInfo,
+                       VariantTypeUnspecified,
+                       VariantType);
 
 struct VariantTyped
 {
@@ -75,60 +67,46 @@ struct VariantTyped
   TypeInfo info;
 };
 
-struct Pointer;
-struct PlainType
-{
-  using V = std::variant
-    <
-    Integral,
-    Real,
-    VariantTyped
-    >;
+GGP_LIB_VARIANT_STRUCT(PlainType,
+                       Integral,
+                       Real,
+                       VariantTyped);
 
-  V v;
-};
+GGP_LIB_VARIANT_STRUCT(Const,
+                       Value<Pointer>,
+                       PlainType);
 
-struct Const
-{
-  using V = std::variant<Value<Pointer>, PlainType>;
+GGP_LIB_VARIANT_STRUCT(Pointer,
+                       Value<Pointer>,
+                       Const,
+                       PlainType);
 
-  V v;
-};
-
-struct Pointer
-{
-  using V = std::variant<Value<Pointer>, Const, PlainType>;
-
-  V v;
-};
 
 struct NullablePointer : Pointer
 {};
 
 // For types we don't support (restrict, volatile, _Atomic qualifiers,
 // function types, etc…)
-struct Meh
-{};
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS(Meh);
 
-struct Type
-{
-  using V = std::variant
-    <
-    Const,
-    Pointer,
-    NullablePointer,
-    PlainType,
-    Meh
-    >;
-
-  V v;
-};
+GGP_LIB_VARIANT_STRUCT(Type,
+                       Const,
+                       Pointer,
+                       NullablePointer,
+                       PlainType,
+                       Meh);
 
 struct Types
 {
   Type for_new;
   Type for_get;
 };
+
+auto operator==(Types const& lhs, Types const& rhs) -> bool {
+  return lhs.for_new == rhs.for_new && lhs.for_get == rhs.for_get;
+}
+
+GGP_LIB_TRIVIAL_NEQ_OP(Types);
 
 std::vector<Types>
 expected_types_for_format (VariantFormat const& format);

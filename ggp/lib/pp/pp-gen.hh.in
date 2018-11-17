@@ -1,0 +1,52 @@
+#ifndef PP_GEN_HH
+#define PP_GEN_HH
+
+// PP_GEN: IGNORE <$> - number from range
+// PP_GEN: IGNORE <$-> - number from range minus one
+// PP_GEN: IGNORE <$#FIRST:LAST(:(PREFIX)?(:(SUFFIX)?(:(SEPARATOR)?))?)?> - number from first to last optionally prefixed and/or suffixed
+
+// PP_GEN: DEF <GA> GENERATED_DETAIL_PP_APPLY
+// PP_GEN: DEF <GB> GENERATED_DETAIL_PP_BOOL
+// PP_GEN: DEF <GD> GENERATED_DETAIL_PP_DEC
+// PP_GEN: DEF <GS> GENERATED_DETAIL_PP_SEQ
+// PP_GEN: DEF <GT> GENERATED_DETAIL_PP_TUPLE
+
+// apply stops here
+#ppdefine <GA>_0(func, array)
+
+// PP_GEN: RANGE 1 3
+
+// decrements
+#ppdefine <GD>_<$> <$->
+
+// applies
+#ppdefine <GA>_EX_4_<$>(func, array, shifted_array) func array <GA>_<$->(func, shifted_array)
+#ppdefine <GA>_EX_3_<$>(func, first_item, shifted_array) <GA>_EX_4_<$>(func, first_item, shifted_array)
+#ppdefine <GA>_EX_2_<$>(func, array) <GA>_EX_3_<$>(func, PP_ARRAY_FIRST_ITEM(array), PP_ARRAY_SHIFT(array))
+#ppdefine <GA>_EX_1_<$>(func, array) <GA>_EX_2_<$>(func, array)
+#ppdefine <GA>_<$>(func, array) <GA>_EX_1_<$>(func, array)
+
+// counting args
+// PP_GEN: IGNORE seq, no prefix, no suffix, comma separator
+#ppdefine <GS> <$#3:0:::, >
+// PP_GEN: IGNORE _ prefix, no suffix, comma separator
+#ppdefine <GS>_ARG_N_EX_2(<$#1:3:_::, >, N, ...) N
+
+#ppdefine <GS>_ARG_N_EX_1(...) <GS>_ARG_N_EX_2(__VA_ARGS__)
+// TODO: <GS>_ARG_N_EX_1(__VA_ARGS__ __VA_OPT__(,) <GS>)
+#ppdefine <GS>_ARG_N(...) <GS>_ARG_N_EX_1(__VA_ARGS__, <GS>)
+
+// tuple
+#ppdefine <GT>_PARENS_1(item) (item)
+
+// PP_GEN: RANGE 2 3
+
+#ppdefine <GT>_PARENS_EX_1_<$>(item, ...) (item), <GT>_PARENS_<$->(__VA_ARGS__)
+#ppdefine <GT>_PARENS_<$>(...) <GT>_PARENS_EX_1_<$>(__VA_ARGS__)
+
+#ppdefine <GT>_EX_3(size, ...) (<GT>_PARENS_ ## size (__VA_ARGS__))
+#ppdefine <GT>_EX_2(size, ...) <GT>_EX_3(size, __VA_ARGS__)
+#ppdefine <GT>_EX_1(...) <GT>_EX_2(<GS>_ARG_N(__VA_ARGS__), __VA_ARGS__)
+#ppdefine <GT>(...) <GT>_EX_1(__VA_ARGS__)
+
+#endif /* PP_GEN_HH */
