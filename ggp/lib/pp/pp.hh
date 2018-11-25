@@ -24,6 +24,9 @@
 
 //PP_TUPLE_REST(((a), (b), (c))) // ((b), (c))
 
+#define DETAIL_PP_TUPLE_OF_N_TUPLES_EX_1(n, ...) GENERATED_DETAIL_PP_TUPLE_OF_N_TUPLES_ ## n (__VA_ARGS__)
+#define PP_TUPLE_OF_N_TUPLES(n, ...) DETAIL_PP_TUPLE_OF_N_TUPLES_EX_1(n, __VA_ARGS__)
+
 //#define ARRAY (3, ((int, i), (long, l), (double, d)))
 
 #define DETAIL_PP_DEC_EX_1(num) GENERATED_DETAIL_PP_DEC_ ## num

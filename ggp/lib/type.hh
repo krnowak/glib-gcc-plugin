@@ -72,6 +72,8 @@ GGP_LIB_VARIANT_STRUCT(PlainType,
                        Real,
                        VariantTyped);
 
+struct Pointer;
+
 GGP_LIB_VARIANT_STRUCT(Const,
                        Value<Pointer>,
                        PlainType);

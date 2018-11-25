@@ -29,6 +29,7 @@
 #define GGP_LIB_UTIL_HH_CHECK_VALUE GGP_LIB_UTIL_HH_CHECK
 
 #include "ggp/lib/detail/util.hh"
+#include "gpp/lib/pp/pp.hh"
 
 #define GGP_LIB_UTIL_STR(x) GGP_LIB_DETAIL_UTIL_STR_HELP_(x)
 
