@@ -216,10 +216,18 @@ class NormalTemplates:
             prefix = m.group(2)
             suffix = m.group(3)
             separator = m.group(4)
-            items = []
-            for i in self._r[range_idx].loop():
-                items.append(f"{prefix}{i}{suffix}")
-            return separator.join(items)
+            return self._handle_iterative(self._r[range_idx].loop(), prefix, suffix, separator)
+        # <$ir<$$ir[from, to. step]><$$ip[prefix]><$$is[suffix]><$$ic[separator]>>
+        m = re.fullmatch(r"\$ir<\$\$ir\[([-+]?\d+)\s*,\s*([-+]?\d+)\s*,\s*([-+]?\d+)\]><\$\$ip\[(.*?)\]><\$\$is\[(.*?)\]><\$\$ic\[(.*?)\]>", key)
+        if m is not None:
+            first = int(m.group(1))
+            last = int(m.group(2))
+            step = int(m.group(3))
+            prefix = m.group(4)
+            suffix = m.group(5)
+            separator = m.group(6)
+            range_ = Range(first, last, step)
+            return self._handle_iterative(range_.loop(), prefix, suffix, separator)
         # <$b[expr]<$$bt[replacement]><$$bf[replacement]>>
         m = re.fullmatch(r"\$b\[(.+?)\]<\$\$bt\[(.*?)\]><\$\$bf\[(.*?)\]>", key)
         if m is not None:
@@ -235,6 +243,12 @@ class NormalTemplates:
             expr = m.group(1)
             return str(g.expr_parser.evaluate_arith_expr(expr))
         return self._t.get(key)
+
+    def _handle_iterative(self, range_, prefix, suffix, separator):
+        items = []
+        for i in range_:
+            items.append(f"{prefix}{i}{suffix}")
+        return separator.join(items)
 
 class RepeatedTemplates:
     def __init__(self, templates, current_range_values):

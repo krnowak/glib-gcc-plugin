@@ -1,0 +1,87 @@
+#ifndef PP_GEN_HH
+#define PP_GEN_HH
+
+#ppignore // <$rvX> - generate a number from Xth range (X is zero based)
+#ppignore // <$a[EXPR]> - evaluate arithmetic expression and generate the result
+#ppignore // <$b[EXPR]<$$bt[REPLACEMENT]><$$bf[REPLACEMENT]>> - generate a replacement based on evaluation of the boolean expression
+#ppignore // <$iX<$$ip[PREFIX]><$$is[SUFFIX]><$$ic[SEPARATOR]>> - iterate the Xth range (X is zero based) and generate the number from the range prefixed, suffixed and separated
+#ppignore // $$ppskip - if evaluated (for example optionally through <$b…>) skips the define altogether
+#ppignore // $$ppla - literal <
+#ppignore // $$ppra - literal >
+
+#pptemplate GD GENERATED_DETAIL_PP_DEC
+#pptemplate GB GENERATED_DETAIL_PP_BOOL
+#pptemplate GA GENERATED_DETAIL_PP_APPLY
+#pptemplate GS GENERATED_DETAIL_PP_SEQ
+#pptemplate GT GENERATED_DETAIL_PP_TUPLE
+#pptemplate GN GENERATED_DETAIL_PP_TUPLE_OF_N_TUPLES
+
+#pppushrange 1 10
+
+// decrements
+#ppdefine <GD>_<$rv0> <$a[<$rv0> - 1]>
+
+#pppoprange
+
+#pppushrange 0 10
+
+// bools
+#ppdefine <GB>_<$rv0> <$b[<$rv0> ne 0]<$$bt[1]><$$bf[0]>>
+
+#pppoprange
+
+#pppushrange 0 10
+
+// applies
+#ppdefine <$b[<$rv0> gt 0]<$$bt[]><$$bf[<$ppskip>]>><GA>_EX_4_<$rv0>(func, first_item, shifted_array) func first_item <GA>_<$a[<$rv0> - 1]>(func, shifted_array)
+#ppdefine <$b[<$rv0> gt 0]<$$bt[]><$$bf[<$ppskip>]>><GA>_EX_3_<$rv0>(func, first_item, shifted_array) <GA>_EX_4_<$rv0>(func, first_item, shifted_array)
+#ppdefine <$b[<$rv0> gt 0]<$$bt[]><$$bf[<$ppskip>]>><GA>_EX_2_<$rv0>(func, array) <GA>_EX_3_<$rv0>(func, PP_ARRAY_FIRST_ITEM(array), PP_ARRAY_SHIFT(array))
+#ppdefine <$b[<$rv0> gt 0]<$$bt[]><$$bf[<$ppskip>]>><GA>_EX_1_<$rv0>(func, array) <GA>_EX_2_<$rv0>(func, array)
+#ppdefine <GA>_<$rv0>(func, array) <$b[<$rv0> gt 0]<$$bt[<GA>_EX_1_<$rv0>(func, array)]><$$bf[// end of the line]>>
+
+#pppoprange
+
+#pppushrange 20 0
+#pppushrange 1 20
+
+// counting args
+#ppignore // seq, no prefix, no suffix, comma and space separator
+#ppdefine <GS> <$i0<$$ip[]><$$is[]><$$ic[, ]>>
+#ppignore // _ prefix, no suffix, comma and separator
+#ppdefine <GS>_ARG_N_EX_2(<$i1<$$ip[_]><$$is[]><$$ic[, ]>>, N, ...) N
+#ppdefine <GS>_ARG_N_EX_1(...) <GS>_ARG_N_EX_2(__VA_ARGS__)
+// TODO: <GS>_ARG_N_EX_1(__VA_ARGS__ __VA_OPT__(,) <GS>)
+#ppdefine <GS>_ARG_N(...) <GS>_ARG_N_EX_1(__VA_ARGS__, <GS>)
+
+#pppoprange 2
+
+// tuple
+#ppdefine <GT>_PARENS_1(item) (item)
+
+
+#pppushrange 2 3
+
+#ppdefine <GT>_PARENS_EX_1_<$rv0>(item, ...) (item), <GT>_PARENS_<$a[<$rv0> - 1]>(__VA_ARGS__)
+#ppdefine <GT>_PARENS_<$rv0>(...) <GT>_PARENS_EX_1_<$rv0>(__VA_ARGS__)
+
+#ppdefine <GT>_EX_3(size, ...) (<GT>_PARENS_ ## size (__VA_ARGS__))
+#ppdefine <GT>_EX_2(size, ...) <GT>_EX_3(size, __VA_ARGS__)
+#ppdefine <GT>_EX_1(...) <GT>_EX_2(<GS>_ARG_N(__VA_ARGS__), __VA_ARGS__)
+#ppdefine <GT>(...) <GT>_EX_1(__VA_ARGS__)
+
+#pppoprange
+
+#ppignore // max tuple size
+#pppushrange 1 4
+#ppignore // max params
+#pppushrange 1 20
+
+#ppdefine <$b[<$rv1> % <$rv0> eq 0 and <$rv1> eq <$rv0>]<$$bt[]><$$bf[<$ppskip>]>><GN>_<$rv0>_<$rv1>_EX_1(<$ir<$$ir[1, <$rv0>, 1]><$$ip[_]><$$is[]><$$ic[, ]>>) (<$ir<$$ir[1, <$rv0>, 1]><$$ip[_]><$$is[]><$$ic[, ]>>) // end of the line
+#ppdefine <$b[<$rv1> % <$rv0> eq 0 and <$rv1> gt <$rv0>]<$$bt[]><$$bf[<$ppskip>]>><GN>_<$rv0>_<$rv1>_EX_1(<$ir<$$ir[1, <$rv0>, 1]><$$ip[_]><$$is[]><$$ic[, ]>>, ...) (<$ir<$$ir[1, <$rv0>, 1]><$$ip[_]><$$is[]><$$ic[, ]>>), <GN>_<$rv0>_<$a[<$rv1> - <$rv0>]>(__VA_ARGS__)
+#ppdefine <GN>_<$rv0>_<$rv1>(...) <$b[<$rv1> % <$rv0> eq 0]<$$bt[<GN>_<$rv0>_<$rv1>_EX_1(__VA_ARGS__)]><$$bf[PARAM_COUNT_<$rv1>_IS_NOT_DIVISIBLE_BY_<$rv0>]>>
+
+#ppdefine <GN>_<$rv0>(size, ...) <GN>_<$rv0>_ ## size (__VA_ARGS__)
+
+#pppoprange 2
+
+#endif /* PP_GEN_HH */

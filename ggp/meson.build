@@ -1,3 +1,4 @@
+subdir('pp')
 subdir('lib')
 subdir('gcc')
 subdir('test')

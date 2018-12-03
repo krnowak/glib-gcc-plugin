@@ -29,7 +29,6 @@
 #define GGP_LIB_UTIL_HH_CHECK_VALUE GGP_LIB_UTIL_HH_CHECK
 
 #include "ggp/lib/detail/util.hh"
-#include "gpp/lib/pp/pp.hh"
 
 #define GGP_LIB_UTIL_STR(x) GGP_LIB_DETAIL_UTIL_STR_HELP_(x)
 
@@ -80,14 +79,18 @@
                                                             \
   GGP_LIB_VARIANT_OPS (Type)
 
-#define GGP_LIB_STRUCT_FIELDS(FieldType, FieldName, ...)  \
-  FieldType FieldName;                                    \
-  GGP_LIB_STRUCT_FIELDS(__VA_ARGS__)
+#define GGP_LIB_STRUCT_EQ_OPS(Type, ...)                                \
+  inline auto operator== (Type const& lhs, Type const &rhs) noexcept -> bool \
+  {                                                                     \
+    return GGP_LIB_DETAIL_STRUCT_EQ_OP(__VA_ARGS__) true;               \
+  }                                                                     \
+                                                                        \
+  GGP_LIB_TRIVIAL_NEQ_OP (Type)
 
 #define GGP_LIB_STRUCT(Type, ...)               \
   struct Type                                   \
   {                                             \
-  GGP_LIB_STRUCT_FIELDS(__VA_ARGS__);           \
+    GGP_LIB_DETAIL_STRUCT_FIELDS(__VA_ARGS__)   \
   };                                            \
                                                 \
   GGP_LIB_STRUCT_EQ_OPS(Type, __VA_ARGS__)

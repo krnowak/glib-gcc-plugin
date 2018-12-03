@@ -1,5 +1,3 @@
-subdir('pp')
-
 dependent_sources = [
     'type.hh',
     'type.cc',

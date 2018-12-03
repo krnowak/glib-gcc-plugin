@@ -39,21 +39,17 @@ enum class Signedness : std::uint8_t
   Any,
 };
 
-struct Integral
-{
-  std::string name;
-  std::vector<std::string> additional_names;
-  std::vector<std::string> accidental_names;
-  std::uint8_t size_in_bytes;
-  Signedness signedness;
-};
+GGP_LIB_STRUCT (Integral,
+                std::string, name,
+                std::vector<std::string>, additional_names,
+                std::vector<std::string>, accidental_names,
+                std::uint8_t, size_in_bytes,
+                Signedness, signedness);
 
-struct Real
-{
-  std::string name;
-  std::vector<std::string> additional_names;
-  std::uint8_t size_in_bytes;
-};
+GGP_LIB_STRUCT (Real,
+                std::string, name,
+                std::vector<std::string>, additional_names,
+                std::uint8_t, size_in_bytes);
 
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS(VariantTypeUnspecified);
 
@@ -61,11 +57,9 @@ GGP_LIB_VARIANT_STRUCT(TypeInfo,
                        VariantTypeUnspecified,
                        VariantType);
 
-struct VariantTyped
-{
-  std::string name;
-  TypeInfo info;
-};
+GGP_LIB_STRUCT (VariantTyped,
+                std::string, name,
+                TypeInfo, info);
 
 GGP_LIB_VARIANT_STRUCT(PlainType,
                        Integral,
@@ -98,17 +92,9 @@ GGP_LIB_VARIANT_STRUCT(Type,
                        PlainType,
                        Meh);
 
-struct Types
-{
-  Type for_new;
-  Type for_get;
-};
-
-auto operator==(Types const& lhs, Types const& rhs) -> bool {
-  return lhs.for_new == rhs.for_new && lhs.for_get == rhs.for_get;
-}
-
-GGP_LIB_TRIVIAL_NEQ_OP(Types);
+GGP_LIB_STRUCT (Types,
+                Type, for_new,
+                Type, for_get);
 
 std::vector<Types>
 expected_types_for_format (VariantFormat const& format);
