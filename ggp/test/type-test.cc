@@ -1,11 +1,14 @@
 #include "catch.hpp"
 
 #include "ggp/test/generated/type.hh"
+#include "ggp/test/generated/variant.hh"
 
 using namespace Ggp::Lib;
 
 namespace
 {
+
+using namespace std::string_literals;
 
 auto tfs(char const* str) -> std::vector<Types>
 {
@@ -34,14 +37,24 @@ auto st() -> std::vector<Types>
   return {Types{{Pointer{{Const{{PlainType{{type_gchar ()}}}}}}}, {NullablePointer{{Pointer{{PlainType{{type_gchar ()}}}}}}}}};
 }
 
+// variant types
+auto vt(TypeInfo const &ti) -> std::vector<Types>
+{
+  return {Types{{Pointer{{PlainType{{VariantTyped{"GVariant"s, ti}}}}}}, {Pointer{{Pointer{{PlainType{{VariantTyped{"GVariant"s, ti}}}}}}}}}};
+}
+
+// variant types
+auto bvt() -> std::vector<Types>
+{
+  return vt (TypeInfo{{VariantType{{Leaf::Basic {{Leaf::any_basic}}}}}});
+}
+
 } // anonymous namespace
 
 TEST_CASE ("format to types", "[type]")
 {
   SECTION ("basic types")
   {
-    using namespace std::string_literals;
-
     CHECK (tfs ("b") == sit(type_gboolean ()));
     CHECK (tfs ("y") == sit(type_guchar ()));
     CHECK (tfs ("n") == sit(type_gint16 ()));
@@ -55,6 +68,27 @@ TEST_CASE ("format to types", "[type]")
     CHECK (tfs ("s") == st ());
     CHECK (tfs ("o") == st ());
     CHECK (tfs ("g") == st ());
+  }
+
+  SECTION ("at types")
+  {
+    CHECK (tfs ("v") == bvt ());
+    CHECK (tfs ("r") == bvt ());
+    CHECK (tfs ("*") == bvt ());
+    CHECK (tfs ("?") == bvt ());
+    CHECK (tfs ("@b") == bvt ());
+  }
+
+  SECTION ("container types")
+  {
+  }
+
+  SECTION ("pointer types")
+  {
+  }
+
+  SECTION ("convenience types")
+  {
   }
   // TODO: See "gvariant format strings" in devhelp for information
   // about expected types for a format

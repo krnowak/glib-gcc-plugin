@@ -94,58 +94,18 @@ struct VariantType;
 namespace VT
 {
 
-struct Array
-{
-  Value<VariantType> element_type;
-};
+GGP_LIB_STRUCT (Array,
+                Value<VariantType>, element_type);
 
-inline bool
-operator== (Array const& lhs, Array const& rhs) noexcept
-{
-  return lhs.element_type == rhs.element_type;
-}
+GGP_LIB_STRUCT (Maybe,
+                Value<VariantType>, pointed_type);
 
-GGP_LIB_TRIVIAL_NEQ_OP (Array);
+GGP_LIB_STRUCT (Tuple,
+                std::vector<VariantType>, types);
 
-struct Maybe
-{
-  Value<VariantType> pointed_type;
-};
-
-inline bool
-operator== (Maybe const& lhs, Maybe const& rhs) noexcept
-{
-  return lhs.pointed_type == rhs.pointed_type;
-}
-
-GGP_LIB_TRIVIAL_NEQ_OP (Maybe);
-
-struct Tuple
-{
-  std::vector<VariantType> types;
-};
-
-inline bool
-operator== (Tuple const& lhs, Tuple const& rhs) noexcept
-{
-  return lhs.types == rhs.types;
-}
-
-GGP_LIB_TRIVIAL_NEQ_OP (Tuple);
-
-struct Entry
-{
-  Leaf::Basic key;
-  Value<VariantType> value;
-};
-
-inline bool
-operator== (Entry const& lhs, Entry const& rhs) noexcept
-{
-  return std::tie (lhs.key, lhs.value) == std::tie (rhs.key, rhs.value);
-}
-
-GGP_LIB_TRIVIAL_NEQ_OP (Entry);
+GGP_LIB_STRUCT (Entry,
+                Leaf::Basic, key,
+                Value<VariantType>, value);
 
 } // namespace VT
 
@@ -213,36 +173,16 @@ GGP_LIB_VARIANT_STRUCT (BasicMaybeBool,
                         Leaf::Handle,
                         Leaf::Double);
 
-struct AtBasicType
-{
-  Leaf::Basic basic;
-};
-
-inline bool
-operator== (AtBasicType const& lhs, AtBasicType const& rhs) noexcept
-{
-  return lhs.basic == rhs.basic;
-}
-
-GGP_LIB_TRIVIAL_NEQ_OP (AtBasicType);
+GGP_LIB_STRUCT (AtBasicType,
+                Leaf::Basic, basic);
 
 GGP_LIB_VARIANT_STRUCT (Pointer,
                         Leaf::String,
                         Leaf::ObjectPath,
                         Leaf::Signature);
 
-struct AtVariantType
-{
-  VariantType type;
-};
-
-inline bool
-operator== (AtVariantType const& lhs, AtVariantType const& rhs) noexcept
-{
-  return lhs.type == rhs.type;
-}
-
-GGP_LIB_TRIVIAL_NEQ_OP (AtVariantType);
+GGP_LIB_STRUCT (AtVariantType,
+                VariantType, type);
 
 struct Convenience
 {
@@ -305,37 +245,17 @@ operator== (Convenience const& lhs, Convenience const& rhs) noexcept
 
 GGP_LIB_TRIVIAL_NEQ_OP (Convenience);
 
-struct Tuple
-{
-  std::vector<VariantFormat> formats;
-};
-
-inline bool
-operator== (Tuple const& lhs, Tuple const& rhs) noexcept
-{
-  return lhs.formats == rhs.formats;
-}
-
-GGP_LIB_TRIVIAL_NEQ_OP (Tuple);
+GGP_LIB_STRUCT (Tuple,
+                std::vector<VariantFormat>, formats);
 
 GGP_LIB_VARIANT_STRUCT (BasicFormat,
                         Leaf::Basic,
                         AtBasicType,
                         Pointer);
 
-struct Entry
-{
-  BasicFormat key;
-  Value<VariantFormat> value;
-};
-
-inline bool
-operator== (Entry const& lhs, Entry const& rhs) noexcept
-{
-  return std::tie (lhs.key, lhs.value) == std::tie (rhs.key, rhs.value);
-}
-
-GGP_LIB_TRIVIAL_NEQ_OP (Entry);
+GGP_LIB_STRUCT (Entry,
+                BasicFormat, key,
+                Value<VariantFormat>, value);
 
 GGP_LIB_VARIANT_STRUCT (MaybePointer,
                         VT::Array,
