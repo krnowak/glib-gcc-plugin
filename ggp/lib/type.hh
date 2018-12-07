@@ -41,15 +41,27 @@ enum class Signedness : std::uint8_t
 
 GGP_LIB_STRUCT (Integral,
                 std::string, name,
-                std::vector<std::string>, additional_names,
-                std::vector<std::string>, accidental_names,
+                //std::vector<std::string>, additional_names,
+                //std::vector<std::string>, accidental_names,
                 std::uint8_t, size_in_bytes,
                 Signedness, signedness);
 
 GGP_LIB_STRUCT (Real,
                 std::string, name,
-                std::vector<std::string>, additional_names,
+                //std::vector<std::string>, additional_names,
                 std::uint8_t, size_in_bytes);
+
+auto type_gboolean () -> Integral;
+auto type_gchar () -> Integral;
+auto type_guchar () -> Integral;
+auto type_gint16 () -> Integral;
+auto type_guint16 () -> Integral;
+auto type_gint32 () -> Integral;
+auto type_guint32 () -> Integral;
+auto type_gint64 () -> Integral;
+auto type_guint64 () -> Integral;
+auto type_handle () -> Integral;
+auto type_gdouble () -> Real;
 
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS(VariantTypeUnspecified);
 

@@ -23,75 +23,130 @@
 namespace Ggp::Lib
 {
 
+using namespace std::string_literals;
+
+auto type_gboolean () -> Integral
+{
+  return {"gboolean"s/*, {}, {"gint"s, "int"s}*/, sizeof (int), Signedness::Signed};
+}
+
+auto type_gchar () -> Integral
+{
+  return {"gchar"s/*, {"char"s}, {}*/, 1u, Signedness::Any};
+}
+
+auto type_guchar () -> Integral
+{
+  return {"guchar"s/*, {}, {}*/, 1u, Signedness::Unsigned};
+}
+
+auto type_gint16 () -> Integral
+{
+  return {"gint16"s/*, {}, {}*/, 2u, Signedness::Signed};
+}
+
+auto type_guint16 () -> Integral
+{
+  return {"guint16"s/*, {}, {}*/, 2u, Signedness::Unsigned};
+}
+
+auto type_gint32 () -> Integral
+{
+  return {"gint32"s/*, {}, {}*/, 4u, Signedness::Signed};
+}
+
+auto type_guint32 () -> Integral
+{
+  return {"guint32"s/*, {}, {}*/, 4u, Signedness::Unsigned};
+}
+
+auto type_gint64 () -> Integral
+{
+  return {"gint64"s/*, {}, {}*/, 8u, Signedness::Signed};
+}
+
+auto type_guint64 () -> Integral
+{
+  return {"guint64"s/*, {}, {}*/, 8u, Signedness::Unsigned};
+}
+
+auto type_handle () -> Integral
+{
+  return {"gint32"s/*, {}, {}*/, 4u, Signedness::Signed};
+}
+
+auto type_gdouble () -> Real
+{
+  return {"gdouble"s/*, {"double"s}*/, 8u};
+}
+
 namespace
 {
-
-using namespace std::string_literals;
 
 PlainType
 gchar_type ()
 {
-  return {{Integral {"gchar"s, {"char"s}, {}, 1u, Signedness::Any}}};
+  return {{type_gchar ()}};
 }
 
 PlainType
 gboolean_type ()
 {
-  return {{Integral {"gboolean"s, {}, {"gint"s, "int"s}, SIZEOF_INT, Signedness::Any}}};
+  return {{type_gboolean ()}};
 }
 
 PlainType
 guchar_type ()
 {
-  return {{Integral {"guchar"s, {}, {}, 1u, Signedness::Unsigned}}};
+  return {{type_guchar ()}};
 }
 
 PlainType
 gint16_type ()
 {
-  return {{Integral {"gint16"s, {}, {}, 2u, Signedness::Signed}}};
+  return {{type_gint16 ()}};
 }
 
 PlainType
 guint16_type ()
 {
-  return {{Integral {"guint16"s, {}, {}, 2u, Signedness::Unsigned}}};
+  return {{type_guint16 ()}};
 }
 
 PlainType
 gint32_type ()
 {
-  return {{Integral {"gint32"s, {}, {}, 4u, Signedness::Signed}}};
+  return {{type_gint32 ()}};
 }
 
 PlainType
 guint32_type ()
 {
-  return {{Integral {"guint32"s, {}, {}, 4u, Signedness::Unsigned}}};
+  return {{type_guint32 ()}};
 }
 
 PlainType
 gint64_type ()
 {
-  return {{Integral {"gint64"s, {}, {}, 8u, Signedness::Signed}}};
+  return {{type_gint64 ()}};
 }
 
 PlainType
 guint64_type ()
 {
-  return {{Integral {"guint64"s, {}, {}, 8u, Signedness::Unsigned}}};
+  return {{type_guint64 ()}};
 }
 
 PlainType
 handle_type ()
 {
-  return {{Integral {"gint32"s, {}, {}, 4u, Signedness::Signed}}};
+  return {{type_handle ()}};
 }
 
 PlainType
 gdouble_type ()
 {
-  return {{Real {"gdouble"s, {"double"s}, 8u}}};
+  return {{type_gdouble ()}};
 }
 
 template <typename T>
@@ -99,6 +154,12 @@ std::vector<Types>
 types (T const& t)
 {
   return {{{{t}}, {{Pointer {{t}}}}}};
+}
+
+template <typename T>
+auto nullable_types (T const& t) -> std::vector<Types>
+{
+  return {{{{t}}, {{NullablePointer {{t}}}}}};
 }
 
 Pointer
@@ -128,23 +189,23 @@ str ()
 std::vector<Types>
 string_types ()
 {
-  return {{{{const_str ()}}, {{Pointer {{str ()}}}}}};
+  return {{{{const_str ()}}, {{NullablePointer {{str ()}}}}}};
 }
 
 std::vector<Types>
 leaf_basic_to_types (Leaf::Basic const& basic)
 {
   auto vh {VisitHelper {
-    [](Leaf::Bool const&) { return types (gboolean_type ()); },
-    [](Leaf::Byte const&) { return types (guchar_type ()); },
-    [](Leaf::I16 const&) { return types (gint16_type ()); },
-    [](Leaf::U16 const&) { return types (guint16_type ()); },
-    [](Leaf::I32 const&) { return types (gint32_type ()); },
-    [](Leaf::U32 const&) { return types (guint32_type ()); },
-    [](Leaf::I64 const&) { return types (gint64_type ()); },
-    [](Leaf::U64 const&) { return types (guint64_type ()); },
-    [](Leaf::Handle const&) { return types (handle_type ()); },
-    [](Leaf::Double const&) { return types (gdouble_type ()); },
+    [](Leaf::Bool const&) { return nullable_types (gboolean_type ()); },
+    [](Leaf::Byte const&) { return nullable_types (guchar_type ()); },
+    [](Leaf::I16 const&) { return nullable_types (gint16_type ()); },
+    [](Leaf::U16 const&) { return nullable_types (guint16_type ()); },
+    [](Leaf::I32 const&) { return nullable_types (gint32_type ()); },
+    [](Leaf::U32 const&) { return nullable_types (guint32_type ()); },
+    [](Leaf::I64 const&) { return nullable_types (gint64_type ()); },
+    [](Leaf::U64 const&) { return nullable_types (guint64_type ()); },
+    [](Leaf::Handle const&) { return nullable_types (handle_type ()); },
+    [](Leaf::Double const&) { return nullable_types (gdouble_type ()); },
     [](Leaf::String const&) { return string_types (); },
     [](Leaf::ObjectPath const&) { return string_types (); },
     [](Leaf::Signature const&) { return string_types (); },
@@ -397,11 +458,14 @@ check_integral (Integral const& from,
 {
   if (from.name != to.name)
   {
+    /*
     auto const& names = to.additional_names;
     if (std::find (names.cbegin(), names.cend(), from.name) == names.cend())
     {
       return false;
     }
+    */
+    return false;
     // TODO: check accidental names
   }
   if (from.signedness != Signedness::Any && from.signedness != to.signedness)
@@ -421,11 +485,14 @@ check_real (Real const& from,
 {
   if (from.name != to.name)
   {
+    /*
     auto const& names = to.additional_names;
     if (std::find (names.cbegin(), names.cend(), from.name) == names.cend())
     {
       return false;
     }
+    */
+    return false;
   }
   if (from.size_in_bytes != to.size_in_bytes)
   {
