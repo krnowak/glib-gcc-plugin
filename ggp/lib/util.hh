@@ -1,6 +1,6 @@
 /* This file is part of glib-gcc-plugin.
  *
- * Copyright 2017 Krzesimir Nowak
+ * Copyright 2017, 2018, 2019 Krzesimir Nowak
  *
  * gcc-glib-plugin is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -32,20 +32,20 @@
 
 #define GGP_LIB_UTIL_STR(x) GGP_LIB_DETAIL_UTIL_STR_HELP_(x)
 
-#define GGP_LIB_TRIVIAL_NEQ_OP(Type)                        \
-  inline bool                                               \
-  operator!= (Type const& lhs, Type const& rhs) noexcept    \
-  {                                                         \
-    return !(lhs == rhs);                                   \
-  }                                                         \
+#define GGP_LIB_TRIVIAL_NEQ_OP(Type)                                \
+  inline auto                                                       \
+  operator!= (Type const& lhs, Type const& rhs) noexcept -> bool    \
+  {                                                                 \
+    return !(lhs == rhs);                                           \
+  }                                                                 \
   struct DONOTUSE
 
 #define GGP_LIB_TRIVIAL_TYPE(Type)              \
   struct Type {}
 
 #define GGP_LIB_TRIVIAL_EQ_OPS(Type)                     \
-  inline bool                                            \
-  operator== (Type const&, Type const&) noexcept         \
+  inline auto                                            \
+  operator== (Type const&, Type const&) noexcept -> bool \
   {                                                      \
     return true;                                         \
   }                                                      \
@@ -56,13 +56,13 @@
   GGP_LIB_TRIVIAL_TYPE (Type);              \
   GGP_LIB_TRIVIAL_EQ_OPS (Type)
 
-#define GGP_LIB_VARIANT_OPS(Type)                           \
-  inline bool                                               \
-  operator== (Type const& lhs, Type const& rhs) noexcept    \
-  {                                                         \
-    return lhs.v == rhs.v;                                  \
-  }                                                         \
-                                                            \
+#define GGP_LIB_VARIANT_OPS(Type)                                \
+  inline auto                                                    \
+  operator== (Type const& lhs, Type const& rhs) noexcept -> bool \
+  {                                                              \
+    return lhs.v == rhs.v;                                       \
+  }                                                              \
+                                                                 \
   GGP_LIB_TRIVIAL_NEQ_OP (Type)
 
 
@@ -79,14 +79,25 @@
                                                             \
   GGP_LIB_VARIANT_OPS (Type)
 
+// Generates equality and inequality operators for a given struct
+// type. Following parameters are types and names of the fields in the
+// struct type. It makes it awkward to use, so use
+// GGP_LIB_STRUCT_EQ_OPS2.
+//
+// Example: GGP_LIB_STRUCT(MyStruct, std::vector<Foo>, all_foos);
 #define GGP_LIB_STRUCT_EQ_OPS(Type, ...)                                \
-  inline auto operator== (Type const& lhs, Type const &rhs) noexcept -> bool \
+  inline auto                                                           \
+  operator== (Type const& lhs, Type const &rhs) noexcept -> bool        \
   {                                                                     \
     return GGP_LIB_DETAIL_STRUCT_EQ_OP(__VA_ARGS__) true;               \
   }                                                                     \
                                                                         \
   GGP_LIB_TRIVIAL_NEQ_OP (Type)
 
+// Generate a struct with given name and fields. Fields are pairs -
+// type and name.
+//
+// Example: GGP_LIB_STRUCT(MyStruct, std::vector<Foo>, all_foos);
 #define GGP_LIB_STRUCT(Type, ...)               \
   struct Type                                   \
   {                                             \
@@ -130,8 +141,8 @@ public:
   ~Value () noexcept = default;
 
   template <typename U>
-  Value&
-  operator= (Value<U>&& u) noexcept
+  auto
+  operator= (Value<U>&& u) noexcept -> Value&
   {
     Value tmp {std::move (u)};
 
@@ -140,16 +151,16 @@ public:
   }
 
   template <typename U>
-  Value&
-  operator= (const Value<U>& u)
+  auto
+  operator= (const Value<U>& u) -> Value&
   {
     Value tmp {u};
     swap (tmp);
     return *this;
   }
 
-  void
-  swap (Value& other) noexcept
+  auto
+  swap (Value& other) noexcept -> void
   {
     using std::swap;
 
@@ -170,16 +181,16 @@ public:
     return *p;
   }
 
-  T*
-  operator-> () noexcept
+  auto
+  operator-> () noexcept -> T*
   {
     auto p {ptr.get ()};
     assert (p != nullptr);
     return p;
   }
 
-  const T*
-  operator-> () const noexcept
+  auto
+  operator-> () const noexcept -> T const*
   {
     auto p {ptr.get ()};
     assert (p != nullptr);
@@ -191,8 +202,8 @@ private:
 };
 
 template <typename T, typename U>
-inline bool
-operator== (Value<T> const& lhs, Value<U> const& rhs) noexcept
+inline auto
+operator== (Value<T> const& lhs, Value<U> const& rhs) noexcept -> bool
 {
   // This is to force the comparison after applying the implicit
   // conversion operators.
@@ -203,16 +214,16 @@ operator== (Value<T> const& lhs, Value<U> const& rhs) noexcept
 }
 
 template <typename T, typename U>
-inline bool
-operator!= (Value<T> const& lhs, Value<U> const& rhs) noexcept
+inline auto
+operator!= (Value<T> const& lhs, Value<U> const& rhs) noexcept -> bool
 {
   return !(lhs == rhs);
 }
 
 // TODO: drop it if unused
 template <typename T, typename... Args>
-Value<T>
-value (Args&&... args)
+auto
+value (Args&&... args) -> Value<T>
 {
   return {std::forward<Args> (args)...};
 }
@@ -224,8 +235,8 @@ template <typename VariantTo,
           typename VariantFrom,
           typename = std::enable_if<Detail::is_std_variant_v<VariantTo> &&
                                     Detail::is_std_variant_v<VariantFrom>>>
-VariantTo
-generalize (VariantFrom&& v)
+auto
+generalize (VariantFrom&& v) -> VariantTo
 {
   return std::visit ([](auto&& value)
                      {
@@ -243,7 +254,8 @@ struct Result
   static_assert (!std::is_same_v<OkType, FailureType>);
 
   template <typename OkHandler, typename FailureHandler>
-  auto handle(OkHandler ok_handler, FailureHandler failure_handler)
+  auto
+  handle(OkHandler ok_handler, FailureHandler failure_handler) /* -> computed */
   {
     auto vh {VisitHelper {ok_handler, failure_handler}};
     return std::visit (vh, this->v);
@@ -254,32 +266,38 @@ struct Result
     return std::holds_alternative<OkType>(this->v);
   }
 
-  auto operator->() const -> OkType const*
+  auto
+  operator->() const -> OkType const*
   {
     return std::addressof (std::get<OkType> (this->v));
   }
 
-  auto operator->() -> OkType*
+  auto
+  operator->() -> OkType*
   {
     return std::addressof (std::get<OkType> (this->v));
   }
 
-  auto operator* () const -> OkType const&
+  auto
+  operator* () const -> OkType const&
   {
     return std::get<OkType> (this->v);
   }
 
-  auto operator* () -> OkType&
+  auto
+  operator* () -> OkType&
   {
     return std::get<OkType> (this->v);
   }
 
-  auto get_failure() const -> FailureType const&
+  auto
+  get_failure() const -> FailureType const&
   {
     return std::get<FailureType> (this->v);
   }
 
-  auto get_failure() -> FailureType&
+  auto
+  get_failure() -> FailureType&
   {
     return std::get<FailureType> (this->v);
   }

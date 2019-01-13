@@ -1,6 +1,6 @@
 /* This file is part of glib-gcc-plugin.
  *
- * Copyright 2017 Krzesimir Nowak
+ * Copyright 2017, 2018, 2019 Krzesimir Nowak
  *
  * gcc-glib-plugin is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -19,6 +19,7 @@
 /*< lib: variant.hh >*/
 /*< stl: algorithm >*/
 /*< stl: iterator >*/
+/*< stl: optional >*/
 /*< stl: sstream >*/
 
 namespace Ggp::Lib
@@ -101,56 +102,49 @@ struct ParseResult
   ParseState state;
 };
 
-using ParseLeafBasicResult = ParseResult<Leaf::Basic>;
-
 auto
-parse_leaf_basic (ParseState state) -> VariantResult<ParseLeafBasicResult>
+parse_leaf_basic_char (char c) -> std::optional<Leaf::Basic>
 {
-  auto maybe_c {state.take_one ()};
-
-  if (!maybe_c)
-  {
-    return {{state.error ("expected basic type, got premature end of a string")}};
-  }
-
-  switch (*maybe_c)
+  switch (c)
   {
   case 'b':
-    return {{ParseLeafBasicResult{{Leaf::bool_}, state}}};
+    return {{Leaf::bool_}};
   case 'y':
-    return {{ParseLeafBasicResult{{Leaf::byte_}, state}}};
+    return {{Leaf::byte_}};
   case 'n':
-    return {{ParseLeafBasicResult{{Leaf::i16}, state}}};
+    return {{Leaf::i16}};
   case 'q':
-    return {{ParseLeafBasicResult{{Leaf::u16}, state}}};
+    return {{Leaf::u16}};
   case 'i':
-    return {{ParseLeafBasicResult{{Leaf::i32}, state}}};
+    return {{Leaf::i32}};
   case 'u':
-    return {{ParseLeafBasicResult{{Leaf::u32}, state}}};
+    return {{Leaf::u32}};
   case 'x':
-    return {{ParseLeafBasicResult{{Leaf::i64}, state}}};
+    return {{Leaf::i64}};
   case 't':
-    return {{ParseLeafBasicResult{{Leaf::u64}, state}}};
+    return {{Leaf::u64}};
   case 'h':
-    return {{ParseLeafBasicResult{{Leaf::handle}, state}}};
+    return {{Leaf::handle}};
   case 'd':
-    return {{ParseLeafBasicResult{{Leaf::double_}, state}}};
-  case 's':
-    return {{ParseLeafBasicResult{{Leaf::string_}, state}}};
-  case 'o':
-    return {{ParseLeafBasicResult{{Leaf::object_path}, state}}};
-  case 'g':
-    return {{ParseLeafBasicResult{{Leaf::signature}, state}}};
-  case '?':
-    return {{ParseLeafBasicResult{{Leaf::any_basic}, state}}};
+    return {{Leaf::double_}};
   default:
-    {
-      std::ostringstream oss;
+    return {};
+  }
+}
 
-      oss << "expected basic type, got '" << *maybe_c << "'";
-
-      return {{state.error (oss.str())}};
-    }
+auto
+parse_leaf_string_type_char (char c) -> std::optional<Leaf::StringType>
+{
+  switch (c)
+  {
+  case 's':
+    return {{Leaf::string_}};
+  case 'o':
+    return {{Leaf::object_path}};
+  case 'g':
+    return {{Leaf::signature}};
+  default:
+    return {};
   }
 }
 
@@ -158,11 +152,47 @@ using ParseTypeResult = ParseResult<VariantType>;
 
 auto parse_single_type (ParseState state) -> VariantResult<ParseTypeResult>;
 
+using ParseEntryKeyTypeResult = ParseResult<VT::EntryKeyType>;
+
+auto parse_entry_key_type (ParseState state) -> VariantResult<ParseEntryKeyTypeResult>
+{
+  auto maybe_c {state.take_one ()};
+
+  if (!maybe_c)
+  {
+    return {{state.error ("expected entry key type, got premature end of a string")}};
+  }
+
+  auto maybe_basic_type {parse_leaf_basic_char (*maybe_c)};
+
+  if (maybe_basic_type)
+  {
+    return {{ParseEntryKeyTypeResult{{*maybe_basic_type}, state}}};
+  }
+
+  auto maybe_string_type {parse_leaf_string_type_char (*maybe_c)};
+
+  if (maybe_string_type)
+  {
+    return {{ParseEntryKeyTypeResult{{*maybe_string_type}, state}}};
+  }
+
+  if (*maybe_c == '?')
+  {
+    return {{ParseEntryKeyTypeResult{{Leaf::any_basic}, state}}};
+  }
+
+  std::ostringstream oss;
+
+  oss << "expected either a basic type, a string type or ?, got " << *maybe_c;
+  return {{state.error (oss.str ())}};
+}
+
 using ParseEntryTypeResult = ParseResult<VT::Entry>;
 
 auto parse_entry_type (ParseState state) -> VariantResult<ParseEntryTypeResult>
 {
-  auto maybe_first_result {parse_leaf_basic (state)};
+  auto maybe_first_result {parse_entry_key_type (state)};
   if (!maybe_first_result)
   {
     return {{state.error ("failed to parse first type for an entry", maybe_first_result.get_failure ())}};
@@ -225,6 +255,20 @@ auto parse_single_type (ParseState state) -> VariantResult<ParseTypeResult>
     return {{state.error ("expected a type, got premature end of a string")}};
   }
 
+  auto maybe_basic_type {parse_leaf_basic_char (*maybe_c)};
+
+  if (maybe_basic_type)
+  {
+    return {{ParseTypeResult{{*maybe_basic_type}, state}}};
+  }
+
+  auto maybe_string_type {parse_leaf_string_type_char (*maybe_c)};
+
+  if (maybe_string_type)
+  {
+    return {{ParseTypeResult{{*maybe_string_type}, state}}};
+  }
+
   switch (*maybe_c)
   {
   case '{':
@@ -269,21 +313,14 @@ auto parse_single_type (ParseState state) -> VariantResult<ParseTypeResult>
     return {{ParseTypeResult{{Leaf::any_tuple}, std::move (state)}}};
   case 'v':
     return {{ParseTypeResult{{Leaf::variant}, std::move (state)}}};
+  case '?':
+    return {{ParseTypeResult{{Leaf::any_basic}, std::move (state)}}};
   default:
     {
-      state.take_back();
+      std::ostringstream oss;
 
-      auto maybe_result {parse_leaf_basic (state)};
-
-      if (!maybe_result)
-      {
-        std::ostringstream oss;
-
-        oss << "failed to parse type, expected '{', '(', 'm', 'a', '*', 'r', 'v' or a basic type, got " << *maybe_c;
-        return {{state.error (oss.str())}};
-      }
-
-      return {{ParseTypeResult{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
+      oss << "failed to parse type, expected '{', '(', 'm', 'a', '*', 'r', 'v', '?', a basic type or a string type, got " << *maybe_c;
+      return {{state.error (oss.str())}};
     }
   }
 }
@@ -315,16 +352,6 @@ namespace
 {
 
 bool
-basic_is_definite (Leaf::Basic const& basic)
-{
-  auto vh {VisitHelper {
-    [](Leaf::AnyBasic const&) { return false; },
-    [](auto const&) { return true; },
-  }};
-  return std::visit (vh, basic.v);
-}
-
-bool
 maybe_is_definite (VT::Maybe const& maybe)
 {
   return maybe.pointed_type->is_definite ();
@@ -349,10 +376,22 @@ array_is_definite (VT::Array const& array)
   return array.element_type->is_definite ();
 }
 
+auto
+entry_key_type_is_definite (VT::EntryKeyType const& entry_key_type) -> bool
+{
+  auto vh {VisitHelper {
+    [](Leaf::AnyBasic const&) { return false; },
+    [](Leaf::StringType const&) { return true; },
+    [](Leaf::Basic const&) { return true; },
+  }};
+
+  return std::visit (vh, entry_key_type.v);
+}
+
 bool
 entry_is_definite (VT::Entry const& entry)
 {
-  return basic_is_definite (entry.key) && entry.value->is_definite ();
+  return entry_key_type_is_definite (entry.key) && entry.value->is_definite ();
 }
 
 } // anonymous namespace
@@ -361,7 +400,9 @@ bool
 VariantType::is_definite () const
 {
   auto vh {VisitHelper {
-    [](Leaf::Basic const& basic) { return basic_is_definite (basic); },
+    [](Leaf::Basic const&) { return true; },
+    [](Leaf::AnyBasic const&) { return false; },
+    [](Leaf::StringType const&) { return true; },
     [](VT::Maybe const& maybe) { return maybe_is_definite (maybe); },
     [](VT::Tuple const& tuple) { return tuple_is_definite (tuple); },
     [](VT::Array const& array) { return array_is_definite (array); },
@@ -370,6 +411,7 @@ VariantType::is_definite () const
     [](Leaf::AnyTuple const&) { return false; },
     [](Leaf::AnyType const&) { return false; },
   }};
+
   return std::visit (vh, this->v);
 }
 
@@ -404,53 +446,9 @@ auto parse_pointer_format (ParseState state) -> VariantResult<ParsePointerFormat
   }
 }
 
-using ParseBasicFormatResult = ParseResult<VF::BasicFormat>;
-
-auto parse_basic_format (ParseState state) -> VariantResult<ParseBasicFormatResult>
-{
-  auto maybe_c {state.take_one ()};
-  if (!maybe_c)
-  {
-    return {{state.error ("expected basic format, got premature end of a string")}};
-  }
-  switch (*maybe_c)
-  {
-  case '@':
-    {
-      auto maybe_result {parse_leaf_basic (state)};
-      if (!maybe_result)
-      {
-        return {{state.error ("failed to parse basic format", maybe_result.get_failure ())}};
-      }
-      return {{ParseBasicFormatResult{{VF::AtBasicType {std::move (maybe_result->parsed)}}, std::move (maybe_result->state)}}};
-    }
-  case '&':
-    {
-      auto maybe_result {parse_pointer_format (state)};
-      if (!maybe_result)
-      {
-        return {{state.error ("failed to parse basic format", maybe_result.get_failure ())}};
-      }
-      return {{ParseBasicFormatResult{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
-    }
-  default:
-    {
-      state.take_back ();
-      auto maybe_result {parse_leaf_basic (state)};
-      if (!maybe_result)
-      {
-        std::ostringstream oss;
-
-        oss << "failed to parse basic format, expected '@', '&' or a basic type, got " << *maybe_c;
-        return {{state.error (oss.str())}};
-      }
-      return {{ParseBasicFormatResult{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
-    }
-  }
-}
-
 using ParseConvenienceFormatResult = ParseResult<VF::Convenience>;
 
+// TODO: this is just ew.
 auto parse_convenience_format (ParseState state) -> VariantResult<ParseConvenienceFormatResult>
 {
   auto maybe_c {state.take_one ()};
@@ -662,11 +660,52 @@ auto parse_tuple_format (ParseState state) -> VariantResult<ParseTupleFormat>
   }
 }
 
+using ParseEntryKeyFormatResult = ParseResult<VF::EntryKeyFormat>;
+
+auto parse_entry_key_format (ParseState state) -> VariantResult<ParseEntryKeyFormatResult>
+{
+  auto maybe_c {state.take_one ()};
+
+  if (!maybe_c)
+  {
+    return {{state.error ("expected either a format for entry key, got premature end of a string")}};
+  }
+
+  auto maybe_basic_type {parse_leaf_basic_char (*maybe_c)};
+
+  if (maybe_basic_type)
+  {
+    return {{ParseEntryKeyFormatResult{{*maybe_basic_type}, state}}};
+  }
+
+  auto maybe_string_type {parse_leaf_string_type_char (*maybe_c)};
+
+  if (maybe_string_type)
+  {
+    return {{ParseEntryKeyFormatResult{{*maybe_string_type}, state}}};
+  }
+
+  switch (*maybe_c)
+  {
+  case '@':
+  case '?':
+    return {{ParseEntryKeyFormatResult{{*maybe_string_type}, state}}};
+  case '&':
+  default:
+    {
+      std::ostringstream oss;
+
+      oss << "expected '}', got " << *maybe_c;
+      return {{state.error (oss.str ())}};
+    }
+  }
+}
+
 using ParseEntryFormatResult = ParseResult<VF::Entry>;
 
 auto parse_entry_format (ParseState state) -> VariantResult<ParseEntryFormatResult>
 {
-  auto maybe_first_result {parse_basic_format (state)};
+  auto maybe_first_result {parse_entry_key_format (state)};
   if (!maybe_first_result)
   {
     return {{state.error ("failed to parse first format for an entry", maybe_first_result.get_failure ())}};
@@ -700,6 +739,21 @@ auto parse_maybe_format (ParseState state) -> VariantResult<ParseMaybeFormatResu
   {
     return {{state.error ("expected either a maybe format, got premature end of a string")}};
   }
+
+  auto maybe_basic_type {parse_leaf_basic_char (*maybe_c)};
+
+  if (maybe_basic_type)
+  {
+    return {{ParseMaybeFormatResult{{VF::MaybeBool {{*maybe_basic_type}}}, std::move (state)}}};
+  }
+
+  auto maybe_string_type {parse_leaf_string_type_char (*maybe_c)};
+
+  if (maybe_string_type)
+  {
+    return {{ParseMaybeFormatResult{{VF::MaybePointer {{*maybe_string_type}}}, std::move (state)}}};
+  }
+
   switch (*maybe_c)
   {
     // pointer maybes
@@ -722,11 +776,13 @@ auto parse_maybe_format (ParseState state) -> VariantResult<ParseMaybeFormatResu
       return {{ParseMaybeFormatResult{{VF::MaybePointer {{VF::AtVariantType {std::move (maybe_result->parsed)}}}}, std::move (maybe_result->state)}}};
     }
   case 'v':
-    return {{ParseMaybeFormatResult{{VF::MaybePointer {{VF::AtVariantType {{Leaf::variant}}}}}, std::move (state)}}};
+    return {{ParseMaybeFormatResult{{VF::MaybePointer {{Leaf::variant}}}, std::move (state)}}};
   case '*':
     return {{ParseMaybeFormatResult{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_type}}}}}, std::move (state)}}};
   case 'r':
     return {{ParseMaybeFormatResult{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_tuple}}}}}, std::move (state)}}};
+  case '?':
+    return {{ParseMaybeFormatResult{{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_basic}}}}}, std::move (state)}}};
   case '&':
     {
       auto maybe_result {parse_pointer_format (state)};
@@ -773,32 +829,12 @@ auto parse_maybe_format (ParseState state) -> VariantResult<ParseMaybeFormatResu
       }
       return {{ParseMaybeFormatResult{{VF::MaybeBool {{std::move (maybe_result->parsed)}}}, std::move (maybe_result->state)}}};
     }
-    // basic maybes, need to decide whether a pointer or bool
   default:
     {
-      state.take_back ();
-      auto maybe_result {parse_leaf_basic (state)};
-      if (!maybe_result)
-      {
-        return {{state.error("expected 'a', '@', 'v', '*', 'r', '&', '^', '{', '(', 'm' or a basic type", maybe_result.get_failure ())}};
-      }
-      auto vh {VisitHelper {
-        [](Leaf::String const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
-        [](Leaf::ObjectPath const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
-        [](Leaf::Signature const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
-        [](Leaf::AnyBasic const& basic) { return VF::Maybe {{VF::MaybePointer {{VF::BasicMaybePointer {{basic}}}}}}; },
-        [](Leaf::Bool const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
-        [](Leaf::Byte const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
-        [](Leaf::I16 const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
-        [](Leaf::U16 const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
-        [](Leaf::I32 const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
-        [](Leaf::U32 const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
-        [](Leaf::I64 const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
-        [](Leaf::U64 const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
-        [](Leaf::Handle const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
-        [](Leaf::Double const& basic) { return VF::Maybe {{VF::MaybeBool {{VF::BasicMaybeBool {{basic}}}}}}; },
-      }};
-      return {{ParseMaybeFormatResult{std::visit (vh, maybe_result->parsed.v), std::move (maybe_result->state)}}};
+      std::ostringstream oss;
+
+      oss << "expected 'a', '@', 'v', '*', 'r', '&', '^', '{', '(', 'm' '?', a basic type or a string type, got " << *maybe_c;
+      return {{state.error (oss.str ())}};
     }
   }
 }
@@ -809,6 +845,20 @@ auto parse_single_format (ParseState state) -> VariantResult<ParseFormatResult>
   if (!maybe_c)
   {
     return {{state.error ("expected a format, got premature end of a string")}};
+  }
+
+  auto maybe_basic_type {parse_leaf_basic_char (*maybe_c)};
+
+  if (maybe_basic_type)
+  {
+    return {{ParseFormatResult{{*maybe_basic_type}, state}}};
+  }
+
+  auto maybe_string_type {parse_leaf_string_type_char (*maybe_c)};
+
+  if (maybe_string_type)
+  {
+    return {{ParseFormatResult{{*maybe_string_type}, state}}};
   }
 
   switch (*maybe_c)
@@ -832,11 +882,13 @@ auto parse_single_format (ParseState state) -> VariantResult<ParseFormatResult>
       return {{ParseFormatResult{VF::AtVariantType {std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
     }
   case 'v':
-    return {{ParseFormatResult{VF::AtVariantType {Leaf::variant}, std::move (state)}}};
+    return {{ParseFormatResult{Leaf::variant, std::move (state)}}};
   case 'r':
     return {{ParseFormatResult{VF::AtVariantType {Leaf::any_tuple}, std::move (state)}}};
   case '*':
     return {{ParseFormatResult{VF::AtVariantType {Leaf::any_type}, std::move (state)}}};
+  case '?':
+    return {{ParseFormatResult{VF::AtVariantType {Leaf::any_basic}, std::move (state)}}};
   case '&':
     {
       auto maybe_result {parse_pointer_format (state)};
@@ -884,16 +936,10 @@ auto parse_single_format (ParseState state) -> VariantResult<ParseFormatResult>
     }
   default:
     {
-      state.take_back ();
-      auto maybe_result {parse_leaf_basic (state)};
-      if (!maybe_result)
-      {
-        std::ostringstream oss;
+      std::ostringstream oss;
 
-        oss << "failed to parse type, expected 'a', '@', 'v', 'r', '*', '&', '^', 'm', '(', '{' or a basic type, got " << *maybe_c;
-        return {{state.error (oss.str())}};
-      }
-      return {{ParseFormatResult{std::move (maybe_result->parsed), std::move (maybe_result->state)}}};
+      oss << "failed to parse type, expected 'a', '@', 'v', 'r', '*', '&', '^', 'm', '(', '{', '?', a basic type or a string type, got " << *maybe_c;
+      return {{state.error (oss.str())}};
     }
   }
 }
@@ -925,29 +971,11 @@ namespace
 {
 
 VariantType
-basic_maybe_pointer_to_variant_type (VF::BasicMaybePointer const& bmp)
-{
-  return {{Leaf::Basic {generalize<Leaf::Basic::V> (bmp.v)}}};
-}
-
-VariantType
-basic_maybe_bool_to_variant_type (VF::BasicMaybeBool const& bmb)
-{
-  return {{Leaf::Basic {generalize<Leaf::Basic::V> (bmb.v)}}};
-}
-
-Leaf::Basic
-pointer_to_basic_type (VF::Pointer pointer)
-{
-  return {generalize<Leaf::Basic::V> (pointer.v)};
-}
-
-VariantType
 convenience_to_variant_type (VF::Convenience const& convenience)
 {
   auto vh {VisitHelper {
-    [](VF::Convenience::Type::StringArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::string_}}}}}}}}; },
-    [](VF::Convenience::Type::ObjectPathArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::object_path}}}}}}}}; },
+    [](VF::Convenience::Type::StringArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::StringType {{Leaf::string_}}}}}}}}; },
+    [](VF::Convenience::Type::ObjectPathArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::StringType {{Leaf::object_path}}}}}}}}; },
     [](VF::Convenience::Type::ByteString const&) { return VariantType {{VT::Array {{VariantType {{Leaf::Basic {{Leaf::byte_}}}}}}}}; },
     [](VF::Convenience::Type::ByteStringArray const&) { return VariantType {{VT::Array {{VariantType {{VT::Array {{VariantType {{Leaf::Basic {Leaf::byte_}}}}}}}}}}}; },
   }};
@@ -955,40 +983,37 @@ convenience_to_variant_type (VF::Convenience const& convenience)
 }
 
 VariantType
-pointer_to_variant_type (VF::Pointer const& pointer)
-{
-  return {{pointer_to_basic_type (pointer)}};
-}
-
-VariantType
 maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
 {
   auto vh {VisitHelper {
     [](VT::Array const& array) { return VariantType {{array}}; },
+    [](Leaf::StringType const& string_type) { return VariantType {{string_type}}; },
+    [](Leaf::Variant const& variant) { return VariantType {{variant}}; },
     [](VF::AtVariantType const& avt) { return avt.type; },
-    [](VF::BasicMaybePointer const& bmp) { return basic_maybe_pointer_to_variant_type (bmp); },
-    [](VF::Pointer const& pointer) { return pointer_to_variant_type (pointer); },
+    [](VF::Pointer const& pointer) { return VariantType {{pointer.string_type}}; },
     [](VF::Convenience const& convenience) { return convenience_to_variant_type (convenience); },
   }};
 
   return {VT::Maybe {std::visit (vh, mp.v)}};
 }
 
-Leaf::Basic
-basic_format_to_basic_type (VF::BasicFormat const& basic_format)
+auto
+entry_key_format_to_entry_key_type (VF::EntryKeyFormat const& entry_key_format) -> VT::EntryKeyType
 {
   auto vh {VisitHelper {
-    [](Leaf::Basic const& basic) { return basic; },
-    [](VF::AtBasicType const& at) { return at.basic; },
-    [](VF::Pointer const& pointer) { return pointer_to_basic_type (pointer); },
+    [](Leaf::Basic const& basic) { return VT::EntryKeyType{{basic}}; },
+    [](Leaf::StringType const& string_type) { return VT::EntryKeyType{{string_type}}; },
+    [](VF::AtEntryKeyType const& at) { return at.entry_key_type; },
+    [](VF::Pointer const& pointer) { return VT::EntryKeyType{{pointer.string_type}}; },
   }};
-  return std::visit (vh, basic_format.v);
+
+  return std::visit (vh, entry_key_format.v);
 }
 
 VariantType
 entry_to_variant_type (VF::Entry const& entry)
 {
-  return {{VT::Entry {basic_format_to_basic_type (entry.key), entry.value->to_type ()}}};
+  return {{VT::Entry {entry_key_format_to_entry_key_type (entry.key), entry.value->to_type ()}}};
 }
 
 VariantType
@@ -1012,11 +1037,12 @@ VariantType
 maybe_bool_to_variant_type (VF::MaybeBool const& mb)
 {
   auto vh {VisitHelper {
-    [](VF::BasicMaybeBool const& bmb) { return basic_maybe_bool_to_variant_type (bmb); },
+    [](Leaf::Basic const& basic) { return VariantType{{basic}}; },
     [](VF::Entry const& entry) { return entry_to_variant_type (entry); },
     [](VF::Tuple const& tuple) { return tuple_to_variant_type (tuple); },
     [](VF::Maybe const& maybe) { return maybe_to_variant_type (maybe); },
   }};
+
   return {VT::Maybe {std::visit (vh, mb.v)}};
 }
 
@@ -1037,9 +1063,11 @@ VariantFormat::to_type () const
 {
   auto vh {VisitHelper {
     [](Leaf::Basic const& basic) { return VariantType {{basic}}; },
+    [](Leaf::StringType const& string_type) { return VariantType {{string_type}}; },
+    [](Leaf::Variant const& variant) { return VariantType {{variant}}; },
     [](VT::Array const& array) { return VariantType {{array}}; },
     [](VF::AtVariantType const& avt) { return avt.type; },
-    [](VF::Pointer const &pointer) { return pointer_to_variant_type (pointer); },
+    [](VF::Pointer const &pointer) { return VariantType {{pointer.string_type}}; },
     [](VF::Convenience const& convenience) { return convenience_to_variant_type (convenience); },
     [](VF::Maybe const& maybe) { return maybe_to_variant_type (maybe); },
     [](VF::Tuple const& tuple) { return tuple_to_variant_type (tuple); },

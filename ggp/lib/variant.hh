@@ -1,6 +1,6 @@
 /* This file is part of glib-gcc-plugin.
  *
- * Copyright 2017 Krzesimir Nowak
+ * Copyright 2017, 2018, 2019 Krzesimir Nowak
  *
  * gcc-glib-plugin is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -18,7 +18,6 @@
 
 /*< check: GGP_LIB_VARIANT_HH_CHECK >*/
 /*< lib: util.hh >*/
-/*< stl: optional >*/
 /*< stl: string_view >*/
 /*< stl: tuple >*/
 /*< stl: variant >*/
@@ -29,6 +28,13 @@
 
 #define GGP_LIB_VARIANT_HH_CHECK_VALUE GGP_LIB_VARIANT_HH_CHECK
 
+// In case I get confused again about 'v' and '@v':
+//
+// 'i' -> int
+// 'v' -> variant<WHATEVER>
+// '@i' -> variant<int>
+// '@v' -> variant<variant<WHATEVER>>
+
 namespace Ggp::Lib
 {
 
@@ -38,9 +44,11 @@ namespace Leaf
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Variant); // v
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (AnyTuple); // r
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (AnyType); // *
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS (AnyBasic); // ?
 inline constexpr Variant variant {};
 inline constexpr AnyTuple any_tuple {};
 inline constexpr AnyType any_type {};
+inline constexpr AnyBasic any_basic {};
 
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Bool); // b
 inline constexpr Bool bool_ {};
@@ -68,9 +76,11 @@ GGP_LIB_TRIVIAL_TYPE_WITH_OPS (ObjectPath); // o
 inline constexpr ObjectPath object_path {};
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Signature); // g
 inline constexpr Signature signature {};
-GGP_LIB_TRIVIAL_TYPE_WITH_OPS (AnyBasic); // ?
-inline constexpr AnyBasic any_basic {};
 
+// I'm not strictly following the GVariant docs here. They say that
+// '?' is a basic type. I treat it as a variant type. They say that
+// 's', 'o' and 'g' are basic types too. I treat them as "string"
+// types.
 GGP_LIB_VARIANT_STRUCT (Basic,
                         Bool,
                         Byte,
@@ -81,11 +91,12 @@ GGP_LIB_VARIANT_STRUCT (Basic,
                         I64,
                         U64,
                         Handle,
-                        Double,
+                        Double);
+
+GGP_LIB_VARIANT_STRUCT (StringType,
                         String,
                         ObjectPath,
-                        Signature,
-                        AnyBasic);
+                        Signature);
 
 } // namespace Leaf
 
@@ -103,8 +114,13 @@ GGP_LIB_STRUCT (Maybe,
 GGP_LIB_STRUCT (Tuple,
                 std::vector<VariantType>, types);
 
+GGP_LIB_VARIANT_STRUCT (EntryKeyType,
+                        Leaf::Basic,
+                        Leaf::StringType,
+                        Leaf::AnyBasic);
+
 GGP_LIB_STRUCT (Entry,
-                Leaf::Basic, key,
+                EntryKeyType, key,
                 Value<VariantType>, value);
 
 } // namespace VT
@@ -131,6 +147,8 @@ struct VariantType
   using V = std::variant
   <
   Leaf::Basic,
+  Leaf::AnyBasic,
+  Leaf::StringType,
   VT::Maybe,
   VT::Tuple,
   VT::Array,
@@ -155,35 +173,13 @@ struct VariantFormat;
 namespace VF
 {
 
-GGP_LIB_VARIANT_STRUCT (BasicMaybePointer,
-                        Leaf::String,
-                        Leaf::ObjectPath,
-                        Leaf::Signature,
-                        Leaf::AnyBasic);
-
-GGP_LIB_VARIANT_STRUCT (BasicMaybeBool,
-                        Leaf::Bool,
-                        Leaf::Byte,
-                        Leaf::I16,
-                        Leaf::U16,
-                        Leaf::I32,
-                        Leaf::U32,
-                        Leaf::I64,
-                        Leaf::U64,
-                        Leaf::Handle,
-                        Leaf::Double);
-
-GGP_LIB_STRUCT (AtBasicType,
-                Leaf::Basic, basic);
-
-GGP_LIB_VARIANT_STRUCT (Pointer,
-                        Leaf::String,
-                        Leaf::ObjectPath,
-                        Leaf::Signature);
+GGP_LIB_STRUCT (Pointer,
+                Leaf::StringType, string_type);
 
 GGP_LIB_STRUCT (AtVariantType,
                 VariantType, type);
 
+// TODO: move the inner types and static members outside?
 struct Convenience
 {
   struct Type
@@ -237,30 +233,30 @@ GGP_LIB_TRIVIAL_EQ_OPS(Convenience::Kind::Duplicated);
 GGP_LIB_VARIANT_OPS(Convenience::Type);
 GGP_LIB_VARIANT_OPS(Convenience::Kind);
 
-inline bool
-operator== (Convenience const& lhs, Convenience const& rhs) noexcept
-{
-  return std::tie (lhs.type, lhs.kind) == std::tie (rhs.type, rhs.kind);
-}
-
-GGP_LIB_TRIVIAL_NEQ_OP (Convenience);
+// TODO: Make the macro less awkward to use.
+GGP_LIB_STRUCT_EQ_OPS(Convenience, _, type, _, kind);
 
 GGP_LIB_STRUCT (Tuple,
                 std::vector<VariantFormat>, formats);
 
-GGP_LIB_VARIANT_STRUCT (BasicFormat,
+GGP_LIB_STRUCT (AtEntryKeyType,
+                VT::EntryKeyType, entry_key_type);
+
+GGP_LIB_VARIANT_STRUCT (EntryKeyFormat,
                         Leaf::Basic,
-                        AtBasicType,
+                        Leaf::StringType,
+                        AtEntryKeyType,
                         Pointer);
 
 GGP_LIB_STRUCT (Entry,
-                BasicFormat, key,
+                EntryKeyFormat, key,
                 Value<VariantFormat>, value);
 
 GGP_LIB_VARIANT_STRUCT (MaybePointer,
                         VT::Array,
+                        Leaf::StringType,
+                        Leaf::Variant,
                         AtVariantType,
-                        BasicMaybePointer,
                         Pointer,
                         Convenience);
 
@@ -271,7 +267,7 @@ GGP_LIB_VARIANT_STRUCT (Maybe,
                         Value<MaybeBool>);
 
 GGP_LIB_VARIANT_STRUCT (MaybeBool,
-                        BasicMaybeBool,
+                        Leaf::Basic,
                         Entry,
                         Tuple,
                         Maybe);
@@ -283,6 +279,8 @@ struct VariantFormat
   using V = std::variant
   <
   Leaf::Basic,
+  Leaf::StringType,
+  Leaf::Variant,
   VT::Array,
   VF::AtVariantType,
   VF::Pointer,

@@ -1,3 +1,23 @@
+/* This file is part of glib-gcc-plugin.
+ *
+ * Copyright 2018, 2019 Krzesimir Nowak
+ *
+ * gcc-glib-plugin is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any
+ * later version.
+ *
+ * gcc-glib-plugin is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+
 #include "catch.hpp"
 
 #include "ggp/test/generated/type.hh"
@@ -43,10 +63,24 @@ auto vt(TypeInfo const &ti) -> std::vector<Types>
   return {Types{{Pointer{{PlainType{{VariantTyped{"GVariant"s, ti}}}}}}, {Pointer{{Pointer{{PlainType{{VariantTyped{"GVariant"s, ti}}}}}}}}}};
 }
 
-// variant types
+auto avt() -> std::vector<Types>
+{
+  return vt (TypeInfo{{VariantType{{Leaf::any_type}}}});
+}
+
 auto bvt() -> std::vector<Types>
 {
   return vt (TypeInfo{{VariantType{{Leaf::Basic {{Leaf::any_basic}}}}}});
+}
+
+auto tvt() -> std::vector<Types>
+{
+  return vt (TypeInfo{{VariantType{{Leaf::any_tuple}}}});
+}
+
+auto vvt() -> std::vector<Types>
+{
+  return vt (TypeInfo{{VariantType{{Leaf::variant}}}});
 }
 
 } // anonymous namespace
@@ -72,11 +106,14 @@ TEST_CASE ("format to types", "[type]")
 
   SECTION ("at types")
   {
-    CHECK (tfs ("v") == bvt ());
-    CHECK (tfs ("r") == bvt ());
-    CHECK (tfs ("*") == bvt ());
+    CHECK (tfs ("v") == vvt ());
+    CHECK (tfs ("v") == tfs ("@v"));
+    CHECK (tfs ("r") == tvt ());
+    CHECK (tfs ("r") == tfs ("@r"));
+    CHECK (tfs ("*") == avt ());
+    CHECK (tfs ("*") == tfs ("@*"));
     CHECK (tfs ("?") == bvt ());
-    CHECK (tfs ("@b") == bvt ());
+    CHECK (tfs ("?") == tfs ("@?"));
   }
 
   SECTION ("container types")
@@ -93,3 +130,4 @@ TEST_CASE ("format to types", "[type]")
   // TODO: See "gvariant format strings" in devhelp for information
   // about expected types for a format
 }
+*/

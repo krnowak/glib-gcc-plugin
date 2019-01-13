@@ -1,6 +1,6 @@
 /* This file is part of glib-gcc-plugin.
  *
- * Copyright 2017 Krzesimir Nowak
+ * Copyright 2019 Krzesimir Nowak
  *
  * gcc-glib-plugin is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -16,10 +16,22 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GGP_GCC_TOKEN_HH
-#define GGP_GCC_TOKEN_HH
+#ifndef GGP_TEST_TEST_PRINT_HH
+#define GGP_TEST_TEST_PRINT_HH
 
-// gcc -> g c c -> 6 2 2 -> 16 12 12 -> 161212
-#define GGP_GCC_TOKEN 161212
+#include <optional>
+#include <iosfwd>
 
-#endif // GGP_GCC_TOKEN_HH
+namespace Ggp::Lib
+{
+
+class VariantType;
+class VariantFormat;
+
+auto operator<< (std::ostream& os, std::optional<VariantType> const& maybe_variant_type) -> std::ostream&;
+
+auto operator<< (std::ostream& os, std::optional<VariantFormat> const& maybe_variant_format) -> std::ostream&;
+
+} // namespace Ggp::Lib
+
+#endif /* GGP_TEST_TEST_PRINT_HH */

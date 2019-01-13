@@ -1,6 +1,6 @@
 /* This file is part of glib-gcc-plugin.
  *
- * Copyright 2017 Krzesimir Nowak
+ * Copyright 2017, 2018 Krzesimir Nowak
  *
  * gcc-glib-plugin is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -40,6 +40,8 @@
 #define GGP_LIB_DETAIL_STRUCT_FIELDS(...) GGP_LIB_DETAIL_APPLY_FUNC_ON_TUPLE_OF_TUPLES(GGP_LIB_DETAIL_STRUCT_FIELDS_FUNC, 2, __VA_ARGS__)
 
 #define GGP_LIB_DETAIL_STRUCT_EQ_OP(...) GGP_LIB_DETAIL_APPLY_FUNC_ON_TUPLE_OF_TUPLES(GGP_LIB_DETAIL_STRUCT_COMPARE_FIELDS_FUNC, 2, __VA_ARGS__)
+
+#define GGP_LIB_DETAIL_DROP_FIRST_FROM_PAIRS(...)
 
 namespace Ggp::Lib::Detail
 {

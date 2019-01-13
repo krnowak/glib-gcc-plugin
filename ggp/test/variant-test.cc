@@ -1,6 +1,27 @@
-#include "catch.hpp"
+/* This file is part of glib-gcc-plugin.
+ *
+ * Copyright 2017, 2018, 2019 Krzesimir Nowak
+ *
+ * gcc-glib-plugin is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the Free
+ * Software Foundation, either version 3 of the License, or (at your option) any
+ * later version.
+ *
+ * gcc-glib-plugin is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
 
 #include "ggp/test/generated/variant.hh"
+#include "ggp/test/test-print.hh"
+
+#include "catch.hpp"
 
 using namespace Ggp::Lib;
 
@@ -55,7 +76,6 @@ TEST_CASE ("Variant types are parsed", "[variant-types]")
     CHECK (vtfs ("s") == opt (basict (Leaf::String {})));
     CHECK (vtfs ("o") == opt (basict (Leaf::ObjectPath {})));
     CHECK (vtfs ("g") == opt (basict (Leaf::Signature {})));
-    CHECK (vtfs ("?") == opt (basict (Leaf::AnyBasic {})));
 
     CHECK (vtfs ("k") == none_t);
   }
@@ -65,6 +85,7 @@ TEST_CASE ("Variant types are parsed", "[variant-types]")
     CHECK (vtfs ("v") == opt (VariantType {{Leaf::Variant {}}}));
     CHECK (vtfs ("*") == opt (VariantType {{Leaf::AnyType {}}}));
     CHECK (vtfs ("r") == opt (VariantType {{Leaf::AnyTuple {}}}));
+    CHECK (vtfs ("?") == opt (VariantType {{Leaf::AnyBasic {}}}));
   }
 
   SECTION ("array types")
@@ -189,6 +210,11 @@ TEST_CASE ("Variant formats are parsed", "[variant-formats]")
     CHECK (vffs ("@s") == opt (VariantFormat {{VF::AtVariantType {basict (Leaf::String {})}}}));
 
     CHECK (vffs ("@") == none_f);
+
+    CHECK (vffs ("r") == vffs ("@r"));
+    CHECK (vffs ("*") == vffs ("@*"));
+    CHECK (vffs ("?") == vffs ("@?"));
+    CHECK (vffs ("v") == vffs ("@v"));
   }
 
   SECTION ("pointer formats")
@@ -207,3 +233,4 @@ TEST_CASE ("Variant formats are parsed", "[variant-formats]")
   // TODO: Tuple formats
   // TODO: Entry formats
 }
+*/

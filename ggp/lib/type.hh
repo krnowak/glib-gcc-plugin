@@ -1,6 +1,6 @@
 /* This file is part of glib-gcc-plugin.
  *
- * Copyright 2017 Krzesimir Nowak
+ * Copyright 2017, 2018, 2019 Krzesimir Nowak
  *
  * gcc-glib-plugin is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -64,6 +64,7 @@ auto type_handle () -> Integral;
 auto type_gdouble () -> Real;
 
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS(VariantTypeUnspecified);
+inline constexpr VariantTypeUnspecified variant_type_unspecified {};
 
 GGP_LIB_VARIANT_STRUCT(TypeInfo,
                        VariantTypeUnspecified,
