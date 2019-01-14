@@ -16,12 +16,12 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
-
-#include "catch.hpp"
-
 #include "ggp/test/generated/type.hh"
 #include "ggp/test/generated/variant.hh"
+
+#include "ggp/test/test-print.hh"
+
+#include "catch.hpp"
 
 using namespace Ggp::Lib;
 
@@ -70,7 +70,7 @@ auto avt() -> std::vector<Types>
 
 auto bvt() -> std::vector<Types>
 {
-  return vt (TypeInfo{{VariantType{{Leaf::Basic {{Leaf::any_basic}}}}}});
+  return vt (TypeInfo{{VariantType{{Leaf::any_basic}}}});
 }
 
 auto tvt() -> std::vector<Types>
@@ -130,4 +130,3 @@ TEST_CASE ("format to types", "[type]")
   // TODO: See "gvariant format strings" in devhelp for information
   // about expected types for a format
 }
-*/

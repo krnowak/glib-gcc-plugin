@@ -29,7 +29,8 @@ namespace
 {
 
 template <typename T>
-auto print_op (std::ostream& os, std::optional<T> const& maybe_t) -> std::ostream&
+auto
+print_op (std::ostream& os, std::optional<T> const& maybe_t) -> std::ostream&
 {
   if (maybe_t)
   {
@@ -45,14 +46,24 @@ auto print_op (std::ostream& os, std::optional<T> const& maybe_t) -> std::ostrea
 
 } // anonymous namespace
 
-auto operator<< (std::ostream& os, std::optional<VariantType> const& maybe_variant_type) -> std::ostream&
+auto
+operator<< (std::ostream& os, std::optional<VariantType> const& maybe_variant_type) -> std::ostream&
 {
   return print_op (os, maybe_variant_type);
 }
 
-auto operator<< (std::ostream& os, std::optional<VariantFormat> const& maybe_variant_format) -> std::ostream&
+auto
+operator<< (std::ostream& os, std::optional<VariantFormat> const& maybe_variant_format) -> std::ostream&
 {
   return print_op (os, maybe_variant_format);
+}
+
+auto
+operator<< (std::ostream& os, std::vector<Types> const&) -> std::ostream&
+{
+  // TODO
+  os << "<some types>";
+  return os;
 }
 
 } // namespace Ggp::Lib

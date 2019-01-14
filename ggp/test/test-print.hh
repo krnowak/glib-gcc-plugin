@@ -19,18 +19,25 @@
 #ifndef GGP_TEST_TEST_PRINT_HH
 #define GGP_TEST_TEST_PRINT_HH
 
-#include <optional>
 #include <iosfwd>
+#include <optional>
+#include <vector>
 
 namespace Ggp::Lib
 {
 
 class VariantType;
 class VariantFormat;
+class Types;
 
-auto operator<< (std::ostream& os, std::optional<VariantType> const& maybe_variant_type) -> std::ostream&;
+auto
+operator<< (std::ostream& os, std::optional<VariantType> const& maybe_variant_type) -> std::ostream&;
 
-auto operator<< (std::ostream& os, std::optional<VariantFormat> const& maybe_variant_format) -> std::ostream&;
+auto
+operator<< (std::ostream& os, std::optional<VariantFormat> const& maybe_variant_format) -> std::ostream&;
+
+auto
+operator<< (std::ostream& os, std::vector<Types> const& types) -> std::ostream&;
 
 } // namespace Ggp::Lib
 
