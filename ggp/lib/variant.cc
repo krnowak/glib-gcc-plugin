@@ -30,18 +30,24 @@ namespace
 
 struct ParseState
 {
-  auto take_one () -> std::optional<char>;
-  auto take_back () -> void;
-  auto get_rest () -> std::string_view;
+  auto
+  take_one () -> std::optional<char>;
+  auto
+  take_back () -> void;
+  auto
+  get_rest () -> std::string_view;
 
-  auto error (std::string reason) -> VariantParseErrorCascade;
-  auto error (std::string reason, VariantParseErrorCascade& error) -> VariantParseErrorCascade;
+  auto
+  error (std::string reason) -> VariantParseErrorCascade;
+  auto
+  error (std::string reason, VariantParseErrorCascade& error) -> VariantParseErrorCascade;
 
   std::string_view string;
   std::size_t offset;
 };
 
-auto ParseState::take_one () -> std::optional<char>
+auto
+ParseState::take_one () -> std::optional<char>
 {
   if (this->offset < this->string.size())
   {
@@ -57,7 +63,8 @@ auto ParseState::take_one () -> std::optional<char>
   }
 }
 
-auto ParseState::take_back () -> void
+auto
+ParseState::take_back () -> void
 {
   if (this->offset > 0)
   {
@@ -65,7 +72,8 @@ auto ParseState::take_back () -> void
   }
 }
 
-auto ParseState::get_rest () -> std::string_view
+auto
+ParseState::get_rest () -> std::string_view
 {
   if (this->offset < this->string.size())
   {
@@ -77,12 +85,14 @@ auto ParseState::get_rest () -> std::string_view
   }
 }
 
-auto ParseState::error (std::string reason) -> VariantParseErrorCascade
+auto
+ParseState::error (std::string reason) -> VariantParseErrorCascade
 {
   return {{{{this->offset, std::move(reason)}}}};
 }
 
-auto ParseState::error (std::string reason, VariantParseErrorCascade& error) -> VariantParseErrorCascade
+auto
+ParseState::error (std::string reason, VariantParseErrorCascade& error) -> VariantParseErrorCascade
 {
   VariantParseErrorCascade e;
 
@@ -150,11 +160,13 @@ parse_leaf_string_type_char (char c) -> std::optional<Leaf::StringType>
 
 using ParseTypeResult = ParseResult<VariantType>;
 
-auto parse_single_type (ParseState state) -> VariantResult<ParseTypeResult>;
+auto
+parse_single_type (ParseState state) -> VariantResult<ParseTypeResult>;
 
 using ParseEntryKeyTypeResult = ParseResult<VT::EntryKeyType>;
 
-auto parse_entry_key_type (ParseState state) -> VariantResult<ParseEntryKeyTypeResult>
+auto
+parse_entry_key_type (ParseState state) -> VariantResult<ParseEntryKeyTypeResult>
 {
   auto maybe_c {state.take_one ()};
 
@@ -190,7 +202,8 @@ auto parse_entry_key_type (ParseState state) -> VariantResult<ParseEntryKeyTypeR
 
 using ParseEntryTypeResult = ParseResult<VT::Entry>;
 
-auto parse_entry_type (ParseState state) -> VariantResult<ParseEntryTypeResult>
+auto
+parse_entry_type (ParseState state) -> VariantResult<ParseEntryTypeResult>
 {
   auto maybe_first_result {parse_entry_key_type (state)};
   if (!maybe_first_result)
@@ -219,7 +232,8 @@ auto parse_entry_type (ParseState state) -> VariantResult<ParseEntryTypeResult>
 
 using ParseTupleTypeResult = ParseResult<VT::Tuple>;
 
-auto parse_tuple_type (ParseState state) -> VariantResult<ParseTupleTypeResult>
+auto
+parse_tuple_type (ParseState state) -> VariantResult<ParseTupleTypeResult>
 {
   std::vector<VariantType> types {};
   for (;;)
@@ -247,7 +261,8 @@ auto parse_tuple_type (ParseState state) -> VariantResult<ParseTupleTypeResult>
   }
 }
 
-auto parse_single_type (ParseState state) -> VariantResult<ParseTypeResult>
+auto
+parse_single_type (ParseState state) -> VariantResult<ParseTypeResult>
 {
   auto maybe_c {state.take_one ()};
   if (!maybe_c)
@@ -327,8 +342,8 @@ auto parse_single_type (ParseState state) -> VariantResult<ParseTypeResult>
 
 } // anonymous namespace
 
-/* static */ VariantResult<VariantType>
-VariantType::from_string (std::string_view const& string)
+/* static */ auto
+VariantType::from_string (std::string_view const& string) -> VariantResult<VariantType>
 {
   auto state {ParseState{string, 0}};
   auto maybe_result {parse_single_type (state)};
@@ -351,14 +366,14 @@ VariantType::from_string (std::string_view const& string)
 namespace
 {
 
-bool
-maybe_is_definite (VT::Maybe const& maybe)
+auto
+maybe_is_definite (VT::Maybe const& maybe) -> bool
 {
   return maybe.pointed_type->is_definite ();
 }
 
-bool
-tuple_is_definite (VT::Tuple const& tuple)
+auto
+tuple_is_definite (VT::Tuple const& tuple) -> bool
 {
   for (auto const& type : tuple.types)
   {
@@ -370,8 +385,8 @@ tuple_is_definite (VT::Tuple const& tuple)
   return true;
 }
 
-bool
-array_is_definite (VT::Array const& array)
+auto
+array_is_definite (VT::Array const& array) -> bool
 {
   return array.element_type->is_definite ();
 }
@@ -388,16 +403,16 @@ entry_key_type_is_definite (VT::EntryKeyType const& entry_key_type) -> bool
   return std::visit (vh, entry_key_type.v);
 }
 
-bool
-entry_is_definite (VT::Entry const& entry)
+auto
+entry_is_definite (VT::Entry const& entry) -> bool
 {
   return entry_key_type_is_definite (entry.key) && entry.value->is_definite ();
 }
 
 } // anonymous namespace
 
-bool
-VariantType::is_definite () const
+auto
+VariantType::is_definite () const -> bool
 {
   auto vh {VisitHelper {
     [](Leaf::Basic const&) { return true; },
@@ -420,7 +435,8 @@ namespace
 
 using ParsePointerFormatResult = ParseResult<VF::Pointer>;
 
-auto parse_pointer_format (ParseState state) -> VariantResult<ParsePointerFormatResult>
+auto
+parse_pointer_format (ParseState state) -> VariantResult<ParsePointerFormatResult>
 {
   auto maybe_c {state.take_one ()};
   if (!maybe_c)
@@ -449,7 +465,8 @@ auto parse_pointer_format (ParseState state) -> VariantResult<ParsePointerFormat
 using ParseConvenienceFormatResult = ParseResult<VF::Convenience>;
 
 // TODO: this is just ew.
-auto parse_convenience_format (ParseState state) -> VariantResult<ParseConvenienceFormatResult>
+auto
+parse_convenience_format (ParseState state) -> VariantResult<ParseConvenienceFormatResult>
 {
   auto maybe_c {state.take_one ()};
 
@@ -630,9 +647,11 @@ auto parse_convenience_format (ParseState state) -> VariantResult<ParseConvenien
 using ParseTupleFormat = ParseResult<VF::Tuple>;
 using ParseFormatResult = ParseResult<VariantFormat>;
 
-auto parse_single_format (ParseState state) -> VariantResult<ParseFormatResult>;
+auto
+parse_single_format (ParseState state) -> VariantResult<ParseFormatResult>;
 
-auto parse_tuple_format (ParseState state) -> VariantResult<ParseTupleFormat>
+auto
+parse_tuple_format (ParseState state) -> VariantResult<ParseTupleFormat>
 {
   std::vector<VariantFormat> formats {};
 
@@ -662,7 +681,8 @@ auto parse_tuple_format (ParseState state) -> VariantResult<ParseTupleFormat>
 
 using ParseEntryKeyFormatResult = ParseResult<VF::EntryKeyFormat>;
 
-auto parse_entry_key_format (ParseState state) -> VariantResult<ParseEntryKeyFormatResult>
+auto
+parse_entry_key_format (ParseState state) -> VariantResult<ParseEntryKeyFormatResult>
 {
   auto maybe_c {state.take_one ()};
 
@@ -703,7 +723,8 @@ auto parse_entry_key_format (ParseState state) -> VariantResult<ParseEntryKeyFor
 
 using ParseEntryFormatResult = ParseResult<VF::Entry>;
 
-auto parse_entry_format (ParseState state) -> VariantResult<ParseEntryFormatResult>
+auto
+parse_entry_format (ParseState state) -> VariantResult<ParseEntryFormatResult>
 {
   auto maybe_first_result {parse_entry_key_format (state)};
   if (!maybe_first_result)
@@ -732,7 +753,8 @@ auto parse_entry_format (ParseState state) -> VariantResult<ParseEntryFormatResu
 
 using ParseMaybeFormatResult = ParseResult<VF::Maybe>;
 
-auto parse_maybe_format (ParseState state) -> VariantResult<ParseMaybeFormatResult>
+auto
+parse_maybe_format (ParseState state) -> VariantResult<ParseMaybeFormatResult>
 {
   auto maybe_c {state.take_one()};
   if (!maybe_c)
@@ -839,7 +861,8 @@ auto parse_maybe_format (ParseState state) -> VariantResult<ParseMaybeFormatResu
   }
 }
 
-auto parse_single_format (ParseState state) -> VariantResult<ParseFormatResult>
+auto
+parse_single_format (ParseState state) -> VariantResult<ParseFormatResult>
 {
   auto maybe_c {state.take_one ()};
   if (!maybe_c)
@@ -970,8 +993,8 @@ VariantFormat::from_string (std::string_view const& string) -> VariantResult<Var
 namespace
 {
 
-VariantType
-convenience_to_variant_type (VF::Convenience const& convenience)
+auto
+convenience_to_variant_type (VF::Convenience const& convenience) -> VariantType
 {
   auto vh {VisitHelper {
     [](VF::Convenience::Type::StringArray const&) { return VariantType {{VT::Array {{VariantType {{Leaf::StringType {{Leaf::string_}}}}}}}}; },
@@ -982,8 +1005,8 @@ convenience_to_variant_type (VF::Convenience const& convenience)
   return std::visit (vh, convenience.type.v);
 }
 
-VariantType
-maybe_pointer_to_variant_type (VF::MaybePointer const& mp)
+auto
+maybe_pointer_to_variant_type (VF::MaybePointer const& mp) -> VariantType
 {
   auto vh {VisitHelper {
     [](VT::Array const& array) { return VariantType {{array}}; },
@@ -1010,14 +1033,14 @@ entry_key_format_to_entry_key_type (VF::EntryKeyFormat const& entry_key_format) 
   return std::visit (vh, entry_key_format.v);
 }
 
-VariantType
-entry_to_variant_type (VF::Entry const& entry)
+auto
+entry_to_variant_type (VF::Entry const& entry) -> VariantType
 {
   return {{VT::Entry {entry_key_format_to_entry_key_type (entry.key), entry.value->to_type ()}}};
 }
 
-VariantType
-tuple_to_variant_type (VF::Tuple const& tuple)
+auto
+tuple_to_variant_type (VF::Tuple const& tuple) -> VariantType
 {
   std::vector<VariantType> types {};
   std::transform (tuple.formats.cbegin (),
@@ -1030,11 +1053,11 @@ tuple_to_variant_type (VF::Tuple const& tuple)
   return {{VT::Tuple {std::move (types)}}};
 }
 
-VariantType
-maybe_to_variant_type (VF::Maybe const& maybe);
+auto
+maybe_to_variant_type (VF::Maybe const& maybe) -> VariantType;
 
-VariantType
-maybe_bool_to_variant_type (VF::MaybeBool const& mb)
+auto
+maybe_bool_to_variant_type (VF::MaybeBool const& mb) -> VariantType
 {
   auto vh {VisitHelper {
     [](Leaf::Basic const& basic) { return VariantType{{basic}}; },
@@ -1046,8 +1069,8 @@ maybe_bool_to_variant_type (VF::MaybeBool const& mb)
   return {VT::Maybe {std::visit (vh, mb.v)}};
 }
 
-VariantType
-maybe_to_variant_type (VF::Maybe const& maybe)
+auto
+maybe_to_variant_type (VF::Maybe const& maybe) -> VariantType
 {
   auto vh {VisitHelper {
     [](VF::MaybePointer const& mp) { return maybe_pointer_to_variant_type (mp); },
@@ -1058,8 +1081,8 @@ maybe_to_variant_type (VF::Maybe const& maybe)
 
 } // anonymous namespace
 
-VariantType
-VariantFormat::to_type () const
+auto
+VariantFormat::to_type () const -> VariantType
 {
   auto vh {VisitHelper {
     [](Leaf::Basic const& basic) { return VariantType {{basic}}; },

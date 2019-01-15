@@ -1,6 +1,6 @@
 # This file is part of glib-gcc-plugin.
 #
-# Copyright 2017, 2018 Krzesimir Nowak
+# Copyright 2017, 2018, 2019 Krzesimir Nowak
 #
 # gcc-glib-plugin is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -24,13 +24,13 @@ ggp_gcc_sources = [
   'plugin.cc',
   'tc.cc',
   'tc.hh',
+  'token.hh',
   'tree.cc',
   'tree.hh',
   'util.cc',
   'util.hh',
   'vc.cc',
   'vc.hh',
-  'token.hh',
 ]
 
 ggp_gcc_plugin_dir = run_command('g++', '-print-file-name=plugin').stdout().strip()

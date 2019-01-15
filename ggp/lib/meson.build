@@ -1,6 +1,6 @@
 # This file is part of glib-gcc-plugin.
 #
-# Copyright 2017, 2018 Krzesimir Nowak
+# Copyright 2017, 2018, 2019 Krzesimir Nowak
 #
 # gcc-glib-plugin is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -16,11 +16,13 @@
 # gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
 
 dependent_sources = [
-    'type.hh',
+    'type-print.cc',
+    'type-print.hh',
     'type.cc',
-    'variant.hh',
-    'variant.cc',
-    'variant-print.hh',
-    'variant-print.cc',
+    'type.hh',
     'util.hh',
+    'variant-print.cc',
+    'variant-print.hh',
+    'variant.cc',
+    'variant.hh',
 ]

@@ -1,6 +1,6 @@
 # This file is part of glib-gcc-plugin.
 #
-# Copyright 2017, 2018 Krzesimir Nowak
+# Copyright 2017, 2018, 2019 Krzesimir Nowak
 #
 # gcc-glib-plugin is free software: you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -19,10 +19,10 @@ subdir('generated')
 
 test_sources = [
     'main.cc',
-    'variant-test.cc',
-    'type-test.cc',
-    'test-print.hh',
     'test-print.cc',
+    'test-print.hh',
+    'type-test.cc',
+    'variant-test.cc',
 ]
 
 test_lib = executable('variant-test',

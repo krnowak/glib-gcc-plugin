@@ -79,20 +79,24 @@ GGP_LIB_VARIANT_STRUCT(PlainType,
                        Real,
                        VariantTyped);
 
+struct PointerBase;
 struct Pointer;
 
 GGP_LIB_VARIANT_STRUCT(Const,
                        Value<Pointer>,
                        PlainType);
 
-GGP_LIB_VARIANT_STRUCT(Pointer,
+GGP_LIB_VARIANT_STRUCT(PointerBase,
                        Value<Pointer>,
                        Const,
                        PlainType);
-
-
-struct NullablePointer : Pointer
+struct Pointer : PointerBase
 {};
+struct NullablePointer : PointerBase
+{};
+
+GGP_LIB_VARIANT_OPS(Pointer);
+GGP_LIB_VARIANT_OPS(NullablePointer);
 
 // For types we don't support (restrict, volatile, _Atomic qualifiers,
 // function types, etc…)

@@ -17,6 +17,8 @@
  */
 
 #include "ggp/test/test-print.hh"
+#include "ggp/test/generated/type.hh"
+#include "ggp/test/generated/type-print.hh"
 #include "ggp/test/generated/variant.hh"
 #include "ggp/test/generated/variant-print.hh"
 
@@ -59,10 +61,12 @@ operator<< (std::ostream& os, std::optional<VariantFormat> const& maybe_variant_
 }
 
 auto
-operator<< (std::ostream& os, std::vector<Types> const&) -> std::ostream&
+operator<< (std::ostream& os, std::vector<Types> const& types_v) -> std::ostream&
 {
-  // TODO
-  os << "<some types>";
+  for (auto const& types : types_v)
+  {
+    os << '(' << types << ')';
+  }
   return os;
 }
 

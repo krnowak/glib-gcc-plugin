@@ -158,9 +158,11 @@ struct VariantType
   Leaf::AnyType
   >;
 
-  static auto from_string (std::string_view const& string) -> VariantResult<VariantType>;
+  static auto
+  from_string (std::string_view const& string) -> VariantResult<VariantType>;
 
-  auto is_definite() const -> bool;
+  auto
+  is_definite() const -> bool;
 
   V v;
 };
@@ -290,9 +292,11 @@ struct VariantFormat
   VF::Entry
   >;
 
-  static auto from_string (std::string_view const& string) -> VariantResult<VariantFormat>;
+  static auto
+  from_string (std::string_view const& string) -> VariantResult<VariantFormat>;
 
-  auto to_type () const -> VariantType;
+  auto
+  to_type () const -> VariantType;
 
   V v;
 };

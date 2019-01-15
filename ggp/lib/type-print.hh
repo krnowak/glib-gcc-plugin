@@ -16,32 +16,28 @@
  * gcc-glib-plugin. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*< check: GGP_LIB_VARIANT_PRINT_HH_CHECK >*/
+/*< check: GGP_LIB_TYPE_PRINT_HH_CHECK >*/
 /*< stl: iosfwd >*/
 
-#ifndef GGP_LIB_VARIANT_PRINT_HH
-#define GGP_LIB_VARIANT_PRINT_HH
+#ifndef GGP_LIB_TYPE_PRINT_HH
+#define GGP_LIB_TYPE_PRINT_HH
 
-#define GGP_LIB_VARIANT_PRINT_HH_CHECK_VALUE GGP_LIB_VARIANT_PRINT_HH_CHECK
+#define GGP_LIB_TYPE_PRINT_HH_CHECK_VALUE GGP_LIB_TYPE_PRINT_HH_CHECK
 
 namespace Ggp::Lib
 {
 
-class VariantType;
-class VariantFormat;
+class Types;
 
 auto
-operator<< (std::ostream& os, VariantType const& variant_type) -> std::ostream&;
-
-auto
-operator<< (std::ostream& os, VariantFormat const& variant_format) -> std::ostream&;
+operator<< (std::ostream& os, Types const& types) -> std::ostream&;
 
 } // namespace Ggp::Lib
 
 #else
 
-#if GGP_LIB_VARIANT_PRINT_HH_CHECK_VALUE != GGP_LIB_VARIANT_PRINT_HH_CHECK
+#if GGP_LIB_TYPE_PRINT_HH_CHECK_VALUE != GGP_LIB_TYPE_PRINT_HH_CHECK
 #error "This non standalone header file was included from two different wrappers."
 #endif
 
-#endif /* GGP_LIB_VARIANT_PRINT_HH */
+#endif /* GGP_LIB_TYPE_PRINT_HH */
