@@ -106,8 +106,8 @@ TEST_CASE ("format to types", "[type]")
 
   SECTION ("at types")
   {
-    CHECK (tfs ("v") == vvt ());
-    CHECK (tfs ("v") == tfs ("@v"));
+    //CHECK (tfs ("v") == vvt ());
+    //CHECK (tfs ("v") == tfs ("@v"));
     CHECK (tfs ("r") == tvt ());
     CHECK (tfs ("r") == tfs ("@r"));
     CHECK (tfs ("*") == avt ());

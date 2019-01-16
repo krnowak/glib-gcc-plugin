@@ -26,8 +26,8 @@ using namespace Ggp::Lib;
 namespace
 {
 
-std::optional<VariantType>
-vtfs (char const* str)
+auto
+vtfs (char const* str) -> std::optional<VariantType>
 {
   auto v {VariantType::from_string (str)};
 
@@ -40,22 +40,22 @@ vtfs (char const* str)
 }
 
 template <typename T>
-std::optional<T>
-opt (T const& t)
+auto
+opt (T const& t) -> std::optional<T>
 {
   return {t};
 }
 
 template <typename T>
-VariantType
-basict (T const& t)
+auto
+basict (T const& t) -> VariantType
 {
   return {Leaf::Basic {{t}}};
 }
 
 template <typename T>
-VariantType
-stringt (T const& t)
+auto
+stringt (T const& t) -> VariantType
 {
   return {Leaf::StringType {{t}}};
 }
@@ -64,8 +64,7 @@ auto none_t {std::optional<VariantType> {}};
 
 } // anonymous namespace
 
-// TODO: coverage
-TEST_CASE ("Variant types are parsed", "[variant-types]")
+TEST_CASE ("Variant types are parsed", "[variant]")
 {
   SECTION ("basic types")
   {
@@ -135,6 +134,8 @@ TEST_CASE ("Variant types are parsed", "[variant-types]")
     CHECK (vtfs ("{?*}") == opt (VariantType {{VT::Entry {{{Leaf::any_basic}}, {VariantType {{Leaf::any_type}}}}}}));
     CHECK (vtfs ("a{?*}") == opt (VariantType {{VT::Array {{VariantType {{VT::Entry {{{Leaf::any_basic}}, {VariantType {{Leaf::any_type}}}}}}}}}}));
 
+    CHECK (vtfs ("{") == none_t);
+    CHECK (vtfs ("{s") == none_t);
     CHECK (vtfs ("{}") == none_t);
     CHECK (vtfs ("{s}") == none_t);
     CHECK (vtfs ("{rr}}") == none_t);
@@ -148,6 +149,116 @@ TEST_CASE ("Variant types are parsed", "[variant-types]")
     CHECK (vtfs ("((this)(msg){is}a(good)(gvariant)(string)(right?))") != none_t);
 
     CHECK (vtfs ("ss") == none_t);
+    CHECK (vtfs ("k") == none_t);
+  }
+}
+
+namespace
+{
+
+auto
+dvt (char const* str) -> bool
+{
+  auto v {VariantType::from_string (str)};
+
+  REQUIRE (v);
+
+  return v->is_definite();
+}
+
+}
+
+TEST_CASE ("Definiteness of variants", "[variant]")
+{
+  SECTION ("definite types")
+  {
+    SECTION ("basic types")
+    {
+      CHECK (dvt ("b"));
+      CHECK (dvt ("y"));
+      CHECK (dvt ("n"));
+      CHECK (dvt ("q"));
+      CHECK (dvt ("i"));
+      CHECK (dvt ("u"));
+      CHECK (dvt ("x"));
+      CHECK (dvt ("t"));
+      CHECK (dvt ("h"));
+      CHECK (dvt ("d"));
+    }
+
+    SECTION ("string types")
+    {
+      CHECK (dvt ("s"));
+      CHECK (dvt ("o"));
+      CHECK (dvt ("g"));
+    }
+
+    SECTION ("other leaf types")
+    {
+      CHECK (dvt ("v"));
+    }
+
+    SECTION ("array types")
+    {
+      CHECK (dvt ("as"));
+      CHECK (dvt ("aas"));
+    }
+
+    SECTION ("maybe types")
+    {
+      CHECK (dvt ("ms"));
+      CHECK (dvt ("mms"));
+    }
+
+    SECTION ("tuple types")
+    {
+      CHECK (dvt ("()"));
+      CHECK (dvt ("(ss)"));
+      CHECK (dvt ("(asmv)"));
+    }
+
+    SECTION ("entry types")
+    {
+      CHECK (dvt ("{sv}"));
+      CHECK (dvt ("{xmas}"));
+    }
+  }
+
+  SECTION ("indefinite types")
+  {
+
+    SECTION ("other leaf types")
+    {
+      CHECK (!dvt ("?"));
+      CHECK (!dvt ("r"));
+      CHECK (!dvt ("*"));
+    }
+
+    SECTION ("array types")
+    {
+      CHECK (!dvt ("a*"));
+      CHECK (!dvt ("aar"));
+    }
+
+    SECTION ("maybe types")
+    {
+      CHECK (!dvt ("m?"));
+      CHECK (!dvt ("mm*"));
+    }
+
+    SECTION ("tuple types")
+    {
+      CHECK (!dvt ("(r)"));
+      CHECK (!dvt ("(ss?)"));
+      CHECK (!dvt ("(a*)"));
+    }
+
+    SECTION ("entry types")
+    {
+      CHECK (!dvt ("{?v}"));
+      CHECK (!dvt ("{s*}"));
+      CHECK (!dvt ("{?*}"));
+    }
   }
 }
 
@@ -185,7 +296,7 @@ auto none_f {std::optional<VariantFormat> {}};
 
 } // anonymous namespace
 
-TEST_CASE ("Variant formats are parsed", "[variant-formats]")
+TEST_CASE ("Variant formats are parsed", "[variant]")
 {
   SECTION ("basic formats")
   {
@@ -206,8 +317,6 @@ TEST_CASE ("Variant formats are parsed", "[variant-formats]")
     CHECK (vffs ("s") == opt (stringf (Leaf::string_)));
     CHECK (vffs ("o") == opt (stringf (Leaf::object_path)));
     CHECK (vffs ("g") == opt (stringf (Leaf::signature)));
-
-    CHECK (vffs ("k") == none_f);
   }
 
   SECTION ("variant formats")
@@ -251,7 +360,36 @@ TEST_CASE ("Variant formats are parsed", "[variant-formats]")
     CHECK (vffs ("&") == none_f);
   }
 
-  // TODO: Convenience formats
+  SECTION ("convenience formats")
+  {
+    using ConType = VF::Convenience::Type;
+    using ConKind = VF::Convenience::Kind;
+
+    CHECK (vffs ("^a&ay") == opt (VariantFormat {{VF::Convenience {{ConType::byte_string_array}, {ConKind::constant}}}}));
+    CHECK (vffs ("^a&o") == opt (VariantFormat {VF::Convenience {{ConType::object_path_array}, {ConKind::constant}}}));
+    CHECK (vffs ("^a&s") == opt (VariantFormat {VF::Convenience {{ConType::string_array}, {ConKind::constant}}}));
+    CHECK (vffs ("^aay") == opt (VariantFormat {VF::Convenience {{ConType::byte_string_array}, {ConKind::duplicated}}}));
+    CHECK (vffs ("^as") == opt (VariantFormat {VF::Convenience {{ConType::string_array}, {ConKind::duplicated}}}));
+    CHECK (vffs ("^ao") == opt (VariantFormat {VF::Convenience {{ConType::object_path_array}, {ConKind::duplicated}}}));
+    CHECK (vffs ("^ay") == opt (VariantFormat {VF::Convenience {{ConType::byte_string}, {ConKind::duplicated}}}));
+    CHECK (vffs ("^&ay") == opt (VariantFormat {VF::Convenience {{ConType::byte_string}, {ConKind::constant}}}));
+
+    CHECK (vffs ("^") == none_f);
+    CHECK (vffs ("^x") == none_f);
+    CHECK (vffs ("^a") == none_f);
+    CHECK (vffs ("^ax") == none_f);
+    CHECK (vffs ("^a&") == none_f);
+    CHECK (vffs ("^a&x") == none_f);
+    CHECK (vffs ("^a&a") == none_f);
+    CHECK (vffs ("^a&ax") == none_f);
+    CHECK (vffs ("^aa") == none_f);
+    CHECK (vffs ("^aax") == none_f);
+    CHECK (vffs ("^&") == none_f);
+    CHECK (vffs ("^&x") == none_f);
+    CHECK (vffs ("^&a") == none_f);
+    CHECK (vffs ("^&ax") == none_f);
+  }
+
   // TODO: Maybe formats
   // TODO: Tuple formats
   // TODO: Entry formats
