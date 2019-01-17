@@ -390,7 +390,72 @@ TEST_CASE ("Variant formats are parsed", "[variant]")
     CHECK (vffs ("^&ax") == none_f);
   }
 
-  // TODO: Maybe formats
-  // TODO: Tuple formats
-  // TODO: Entry formats
+  SECTION ("maybe formats")
+  {
+    using ConType = VF::Convenience::Type;
+    using ConKind = VF::Convenience::Kind;
+
+    CHECK (vffs ("mas") == opt (VariantFormat {{VF::Maybe {{VF::MaybePointer {{VT::Array {{stringt (Leaf::string_)}}}}}}}}));
+    CHECK (vffs ("ms") == opt (VariantFormat {{VF::Maybe {{VF::MaybePointer {{Leaf::StringType {{Leaf::string_}}}}}}}}));
+    CHECK (vffs ("mv") ==  opt (VariantFormat {{VF::Maybe {{VF::MaybePointer {{Leaf::variant}}}}}}));
+    CHECK (vffs ("m@s") ==  opt (VariantFormat {{VF::Maybe {{VF::MaybePointer {{VF::AtVariantType {{Leaf::StringType {{Leaf::string_}}}}}}}}}}));
+    CHECK (vffs ("m*") ==  opt (VariantFormat {{VF::Maybe {{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_type}}}}}}}}));
+    CHECK (vffs ("m?") ==  opt (VariantFormat {{VF::Maybe {{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_basic}}}}}}}}));
+    CHECK (vffs ("mr") ==  opt (VariantFormat {{VF::Maybe {{VF::MaybePointer {{VF::AtVariantType {{Leaf::any_tuple}}}}}}}}));
+    CHECK (vffs ("m&s") ==  opt (VariantFormat {{VF::Maybe {{VF::MaybePointer {{VF::Pointer {{Leaf::string_}}}}}}}}));
+    CHECK (vffs ("m^as") ==  opt (VariantFormat {{VF::Maybe {{VF::MaybePointer {{VF::Convenience {{ConType::string_array}, {ConKind::duplicated}}}}}}}}));
+    CHECK (vffs ("mb") == opt (VariantFormat {{VF::Maybe {{VF::MaybeBool {{Leaf::Basic {{Leaf::bool_}}}}}}}}));
+    CHECK (vffs ("m{bs}") == opt (VariantFormat {{VF::Maybe {{VF::MaybeBool {{VF::Entry {{{Leaf::Basic {{Leaf::bool_}}}}, {stringf (Leaf::string_)}}}}}}}}));
+    CHECK (vffs ("m(bb)") == opt (VariantFormat {{VF::Maybe {{VF::MaybeBool {{VF::Tuple {{basicf (Leaf::bool_), basicf (Leaf::bool_)}}}}}}}}));
+    CHECK (vffs ("mmb") == opt (VariantFormat {{VF::Maybe {{VF::MaybeBool {{VF::Maybe {{VF::MaybeBool {{Leaf::Basic {{Leaf::bool_}}}}}}}}}}}}));
+
+    CHECK (vffs ("m") == none_f);
+    CHECK (vffs ("ma") == none_f);
+    CHECK (vffs ("m@") == none_f);
+    CHECK (vffs ("m^") == none_f);
+    CHECK (vffs ("m&") == none_f);
+    CHECK (vffs ("m{") == none_f);
+    CHECK (vffs ("m(") == none_f);
+    CHECK (vffs ("mm") == none_f);
+    CHECK (vffs ("mk") == none_f);
+  }
+
+  SECTION ("entry formats")
+  {
+    CHECK (vffs ("{bb}") == opt (VariantFormat {{VF::Entry {{{Leaf::Basic {{Leaf::bool_}}}}, basicf (Leaf::bool_)}}}));
+    CHECK (vffs ("{bb}") == opt (VariantFormat {{VF::Entry {{{Leaf::Basic {{Leaf::bool_}}}}, basicf (Leaf::bool_)}}}));
+    CHECK (vffs ("{sb}") == opt (VariantFormat {{VF::Entry {{{Leaf::StringType {{Leaf::string_}}}}, basicf (Leaf::bool_)}}}));
+    CHECK (vffs ("{@bb}") == opt (VariantFormat {{VF::Entry {{{VF::AtEntryKeyType {{{Leaf::Basic {{Leaf::bool_}}}}}}}, basicf (Leaf::bool_)}}}));
+    CHECK (vffs ("{?b}") == opt (VariantFormat {{VF::Entry {{{VF::AtEntryKeyType {{{Leaf::any_basic}}}}}, basicf (Leaf::bool_)}}}));
+    CHECK (vffs ("{&sb}") == opt (VariantFormat {{VF::Entry {{{VF::Pointer {{Leaf::string_}}}}, basicf (Leaf::bool_)}}}));
+
+    CHECK (vffs ("{") == none_f);
+    CHECK (vffs ("{s") == none_f);
+    CHECK (vffs ("{ss") == none_f);
+    CHECK (vffs ("{ss)") == none_f);
+    CHECK (vffs ("{**}") == none_f);
+    CHECK (vffs ("{@**}") == none_f);
+    CHECK (vffs ("{&xx}") == none_f);
+  }
+
+  SECTION ("tuple formats")
+  {
+    CHECK (vffs ("()") == opt (VariantFormat {{VF::Tuple {{}}}}));
+    CHECK (vffs ("(b)") == opt (VariantFormat {{VF::Tuple {{basicf (Leaf::bool_)}}}}));
+    CHECK (vffs ("(bb)") == opt (VariantFormat {{VF::Tuple {{basicf (Leaf::bool_), basicf (Leaf::bool_)}}}}));
+
+    CHECK (vffs ("(") == none_f);
+    CHECK (vffs ("(b") == none_f);
+    CHECK (vffs ("(}") == none_f);
+  }
+
+  SECTION ("other formats")
+  {
+    CHECK (vffs ("ss") == none_f);
+  }
+}
+
+TEST_CASE ("Variant formats are converted to variant types", "[variant]")
+{
+  // TODO
 }

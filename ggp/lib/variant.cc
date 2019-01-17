@@ -666,6 +666,7 @@ parse_tuple_format (ParseState state) -> VariantResult<ParseTupleFormat>
     {
       return {{ParseTupleFormat{std::move (formats), state}}};
     }
+    state.take_back ();
     auto maybe_result {parse_single_format (state)};
     if (!maybe_result)
     {
@@ -708,9 +709,25 @@ parse_entry_key_format (ParseState state) -> VariantResult<ParseEntryKeyFormatRe
   switch (*maybe_c)
   {
   case '@':
+    {
+      auto maybe_result {parse_entry_key_type (state)};
+      if (!maybe_result)
+      {
+        return {{state.error ("failed to parse entry key format", maybe_result.get_failure ())}};
+      }
+      return {{ParseEntryKeyFormatResult{{VF::AtEntryKeyType {{std::move (maybe_result->parsed)}}}, maybe_result->state}}};
+    }
   case '?':
-    return {{ParseEntryKeyFormatResult{{*maybe_string_type}, state}}};
+    return {{ParseEntryKeyFormatResult{{VF::AtEntryKeyType {{{Leaf::any_basic}}}}, state}}};
   case '&':
+    {
+      auto maybe_result {parse_pointer_format (state)};
+      if (!maybe_result)
+      {
+        return {{state.error("failed to parse entry key format", maybe_result.get_failure ())}};
+      }
+      return {{ParseEntryKeyFormatResult{{std::move (maybe_result->parsed)}, std::move (maybe_result->state)}}};
+    }
   default:
     {
       std::ostringstream oss;
