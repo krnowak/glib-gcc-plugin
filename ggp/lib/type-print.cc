@@ -76,7 +76,7 @@ print_nullable_pointer (std::ostream& os, NullablePointer const& nullable_pointe
 auto
 print_integral (std::ostream& os, Integral const& integral) -> void
 {
-  os << "integral< " << '"' << integral.name << '"' << ", " << integral.size_in_bytes << ", ";
+  os << "integral< " << '"' << integral.name << '"' << ", " << static_cast<int> (integral.size_in_bytes) << ", ";
   switch (integral.signedness)
   {
   case Signedness::Signed:
@@ -102,7 +102,7 @@ print_integral (std::ostream& os, Integral const& integral) -> void
 auto
 print_real (std::ostream& os, Real const& real) -> void
 {
-  os << "real< " << '"' << real.name << '"' << ", " << real.size_in_bytes << " >";
+  os << "real< " << '"' << real.name << '"' << ", " << static_cast<int> (real.size_in_bytes) << " >";
 }
 
 auto

@@ -30,7 +30,8 @@ namespace
 
 using namespace std::string_literals;
 
-auto tfs(char const* str) -> std::vector<Types>
+auto
+tfs (char const* str) -> std::vector<Types>
 {
   auto v {VariantFormat::from_string (str)};
 
@@ -39,94 +40,206 @@ auto tfs(char const* str) -> std::vector<Types>
   return expected_types_for_format (*v);
 }
 
-// single integral type
-auto sit(Integral const& i) -> std::vector<Types>
+auto
+integral_type (Integral const& i) -> std::vector<Types>
 {
-  return {Types{{{PlainType{{i}}}}, {{NullablePointer{PlainType{{i}}}}}}};
+  return {Types {{{PlainType {{i}}}}, {{NullablePointer {PlainType {{i}}}}}}};
 }
 
-// single real type
-auto srt(Real const& r) -> std::vector<Types>
+auto
+real_type (Real const& r) -> std::vector<Types>
 {
-  return {Types{{{PlainType{{r}}}}, {{NullablePointer{PlainType{{r}}}}}}};
+  return {Types {{{PlainType {{r}}}}, {{NullablePointer {PlainType {{r}}}}}}};
 }
 
-// string types
-auto st() -> std::vector<Types>
+auto
+string_type () -> std::vector<Types>
 {
-  return {Types{{Pointer{{Const{{PlainType{{type_gchar ()}}}}}}}, {NullablePointer{{Pointer{{PlainType{{type_gchar ()}}}}}}}}};
+  return {Types {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}, {NullablePointer {{Pointer {{PlainType {{type_gchar ()}}}}}}}}};
 }
 
-// variant types
-auto vt(TypeInfo const &ti) -> std::vector<Types>
+auto
+custom_variant(TypeInfo const &ti) -> std::vector<Types>
 {
-  return {Types{{Pointer{{PlainType{{VariantTyped{"GVariant"s, ti}}}}}}, {Pointer{{Pointer{{PlainType{{VariantTyped{"GVariant"s, ti}}}}}}}}}};
+  return {Types {{Pointer {{PlainType {{VariantTyped {"GVariant"s, ti}}}}}}, {NullablePointer {{Pointer {{PlainType {{VariantTyped {"GVariant"s, ti}}}}}}}}}};
 }
 
-auto avt() -> std::vector<Types>
+auto
+any_type_variant() -> std::vector<Types>
 {
-  return vt (TypeInfo{{VariantType{{Leaf::any_type}}}});
+  return custom_variant (TypeInfo {{VariantType {{Leaf::any_type}}}});
 }
 
-auto bvt() -> std::vector<Types>
+auto
+any_basic_variant() -> std::vector<Types>
 {
-  return vt (TypeInfo{{VariantType{{Leaf::any_basic}}}});
+  return custom_variant (TypeInfo {{VariantType {{Leaf::any_basic}}}});
 }
 
-auto tvt() -> std::vector<Types>
+auto
+any_tuple_variant() -> std::vector<Types>
 {
-  return vt (TypeInfo{{VariantType{{Leaf::any_tuple}}}});
+  return custom_variant (TypeInfo {{VariantType {{Leaf::any_tuple}}}});
 }
 
-auto vvt() -> std::vector<Types>
+auto
+unspecified_variant () -> std::vector<Types>
 {
-  return vt (TypeInfo{{VariantType{{Leaf::variant}}}});
+  return custom_variant (TypeInfo {{variant_type_unspecified}});
+}
+
+auto
+variant_variant() -> std::vector<Types>
+{
+  return custom_variant (TypeInfo {{VariantType {{Leaf::variant}}}});
+}
+
+auto
+array_of_strings() -> std::vector<Types>
+{
+  return {Types {{NullablePointer {{PlainType {{VariantTyped {"GVariantBuilder", {{VariantType {{VT::Array {VariantType {{Leaf::StringType {{Leaf::string_}}}}}}}}}}}}}}}, {{NullablePointer {{Pointer {{PlainType {{VariantTyped {"GVariantIter", {{VariantType {{VT::Array {VariantType {{Leaf::StringType {{Leaf::string_}}}}}}}}}}}}}}}}}}}};
+}
+
+auto
+array_of_any_basics() -> std::vector<Types>
+{
+  return {Types {{Pointer {{PlainType {{VariantTyped {"GVariantBuilder", {{VariantType {{VT::Array {VariantType {{Leaf::any_basic}}}}}}}}}}}}}, {{NullablePointer {{Pointer {{PlainType {{VariantTyped {"GVariantIter", {{VariantType {{VT::Array {VariantType {{Leaf::any_basic}}}}}}}}}}}}}}}}}};
+}
+
+auto
+pointer_to_string () -> std::vector<Types>
+{
+  return {Types {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}, {NullablePointer {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}};
+}
+
+auto
+convenience_a_amp_a_y () -> std::vector<Types>
+{
+  return {Types {{Pointer {{Const {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}}, {NullablePointer {{Pointer {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}}}};
+}
+
+auto
+convenience_a_amp_o () -> std::vector<Types>
+{
+  return {Types {{Pointer {{Const {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}}, {NullablePointer {{Pointer {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}}}};
+}
+
+auto
+convenience_a_amp_s () -> std::vector<Types>
+{
+  return {Types {{Pointer {{Const {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}}, {NullablePointer {{Pointer {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}}}};
+}
+
+auto
+convenience_a_a_y () -> std::vector<Types>
+{
+  return {Types {{Pointer {{Const {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}}, {NullablePointer {{Pointer {{Pointer {{PlainType {{type_gchar ()}}}}}}}}}}};
+}
+
+auto
+convenience_a_s () -> std::vector<Types>
+{
+  return {Types {{Pointer {{Const {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}}, {NullablePointer {{Pointer {{Pointer {{PlainType {{type_gchar ()}}}}}}}}}}};
+}
+
+auto
+convenience_a_o () -> std::vector<Types>
+{
+  return {Types {{Pointer {{Const {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}}, {NullablePointer {{Pointer {{Pointer {{PlainType {{type_gchar ()}}}}}}}}}}};
+}
+
+auto
+convenience_a_y () -> std::vector<Types>
+{
+  return {Types {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}, {NullablePointer {{Pointer {{PlainType {{type_gchar ()}}}}}}}}};
+}
+
+auto
+convenience_amp_a_y () -> std::vector<Types>
+{
+  return {Types {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}, {NullablePointer {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}};
 }
 
 } // anonymous namespace
 
+// TODO: See "gvariant format strings" in devhelp for information
+// about expected types for a format
 TEST_CASE ("format to types", "[type]")
 {
-  SECTION ("basic types")
+  SECTION ("basic type formats")
   {
-    CHECK (tfs ("b") == sit(type_gboolean ()));
-    CHECK (tfs ("y") == sit(type_guchar ()));
-    CHECK (tfs ("n") == sit(type_gint16 ()));
-    CHECK (tfs ("q") == sit(type_guint16 ()));
-    CHECK (tfs ("i") == sit(type_gint32 ()));
-    CHECK (tfs ("u") == sit(type_guint32 ()));
-    CHECK (tfs ("x") == sit(type_gint64 ()));
-    CHECK (tfs ("t") == sit(type_guint64 ()));
-    CHECK (tfs ("h") == sit(type_handle ()));
-    CHECK (tfs ("d") == srt(type_gdouble ()));
-    CHECK (tfs ("s") == st ());
-    CHECK (tfs ("o") == st ());
-    CHECK (tfs ("g") == st ());
+    CHECK (tfs ("b") == integral_type (type_gboolean ()));
+    CHECK (tfs ("y") == integral_type (type_guchar ()));
+    CHECK (tfs ("n") == integral_type (type_gint16 ()));
+    CHECK (tfs ("q") == integral_type (type_guint16 ()));
+    CHECK (tfs ("i") == integral_type (type_gint32 ()));
+    CHECK (tfs ("u") == integral_type (type_guint32 ()));
+    CHECK (tfs ("x") == integral_type (type_gint64 ()));
+    CHECK (tfs ("t") == integral_type (type_guint64 ()));
+    CHECK (tfs ("h") == integral_type (type_handle ()));
+    CHECK (tfs ("d") == real_type (type_gdouble ()));
   }
 
-  SECTION ("at types")
+  SECTION ("string type formats")
   {
-    //CHECK (tfs ("v") == vvt ());
-    //CHECK (tfs ("v") == tfs ("@v"));
-    CHECK (tfs ("r") == tvt ());
+    CHECK (tfs ("s") == string_type ());
+    CHECK (tfs ("o") == string_type ());
+    CHECK (tfs ("g") == string_type ());
+  }
+
+  SECTION ("variant type formats")
+  {
+    CHECK (tfs ("v") == unspecified_variant ());
+  }
+
+  SECTION ("array formats")
+  {
+    CHECK (tfs ("as") == array_of_strings ());
+    CHECK (tfs ("a?") == array_of_any_basics ());
+  }
+
+  SECTION ("at variant type formats")
+  {
+    CHECK (tfs ("@v") == variant_variant ());
+    CHECK (tfs ("r") == any_tuple_variant ());
     CHECK (tfs ("r") == tfs ("@r"));
-    CHECK (tfs ("*") == avt ());
+    CHECK (tfs ("*") == any_type_variant ());
     CHECK (tfs ("*") == tfs ("@*"));
-    CHECK (tfs ("?") == bvt ());
+    CHECK (tfs ("?") == any_basic_variant ());
     CHECK (tfs ("?") == tfs ("@?"));
   }
 
-  SECTION ("container types")
+  SECTION ("pointer formats")
   {
+    CHECK (tfs ("&s") == pointer_to_string ());
+    CHECK (tfs ("&o") == pointer_to_string ());
+    CHECK (tfs ("&g") == pointer_to_string ());
   }
 
-  SECTION ("pointer types")
+  SECTION ("convenience formats")
   {
+    CHECK (tfs ("^a&ay") == convenience_a_amp_a_y ());
+    CHECK (tfs ("^a&o") == convenience_a_amp_o ());
+    CHECK (tfs ("^a&s") == convenience_a_amp_s ());
+    CHECK (tfs ("^aay") == convenience_a_a_y ());
+    CHECK (tfs ("^as") == convenience_a_s ());
+    CHECK (tfs ("^ao") == convenience_a_o ());
+    CHECK (tfs ("^ay") == convenience_a_y ());
+    CHECK (tfs ("^&ay") == convenience_amp_a_y ());
   }
 
-  SECTION ("convenience types")
+  SECTION ("maybe formats")
   {
+    // TODO
   }
-  // TODO: See "gvariant format strings" in devhelp for information
-  // about expected types for a format
+
+  SECTION ("entry formats")
+  {
+    // TODO
+  }
+
+  SECTION ("tuple formats")
+  {
+    // TODO
+  }
 }

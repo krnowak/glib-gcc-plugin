@@ -455,7 +455,123 @@ TEST_CASE ("Variant formats are parsed", "[variant]")
   }
 }
 
+namespace
+{
+
+auto
+vf2t (char const* str) -> VariantType {
+  auto v {VariantFormat::from_string (str)};
+
+  REQUIRE (v);
+
+  return v->to_type ();
+}
+
+auto
+vt (char const* str) -> VariantType {
+  auto v {VariantType::from_string (str)};
+
+  REQUIRE (v);
+
+  return *v;
+}
+
+} // anonymous namespace
+
 TEST_CASE ("Variant formats are converted to variant types", "[variant]")
 {
-  // TODO
+  SECTION ("basic formats")
+  {
+    CHECK (vf2t ("b") == vt ("b"));
+    CHECK (vf2t ("y") == vt ("y"));
+    CHECK (vf2t ("n") == vt ("n"));
+    CHECK (vf2t ("q") == vt ("q"));
+    CHECK (vf2t ("i") == vt ("i"));
+    CHECK (vf2t ("u") == vt ("u"));
+    CHECK (vf2t ("x") == vt ("x"));
+    CHECK (vf2t ("t") == vt ("t"));
+    CHECK (vf2t ("h") == vt ("h"));
+    CHECK (vf2t ("d") == vt ("d"));
+  }
+
+  SECTION ("string type formats")
+  {
+    CHECK (vf2t ("s") == vt ("s"));
+    CHECK (vf2t ("o") == vt ("o"));
+    CHECK (vf2t ("g") == vt ("g"));
+  }
+
+  SECTION ("variant formats")
+  {
+    CHECK (vf2t ("v") == vt ("v"));
+  }
+
+  SECTION ("array formats")
+  {
+    CHECK (vf2t ("as") == vt ("as"));
+  }
+
+  SECTION ("at variant type formats")
+  {
+    CHECK (vf2t ("r") == vt ("r"));
+    CHECK (vf2t ("*") == vt ("*"));
+    CHECK (vf2t ("?") == vt ("?"));
+    CHECK (vf2t ("@r") == vt ("r"));
+    CHECK (vf2t ("@*") == vt ("*"));
+    CHECK (vf2t ("@?") == vt ("?"));
+    CHECK (vf2t ("@s") == vt ("s"));
+    CHECK (vf2t ("@v") == vt ("v"));
+  }
+
+  SECTION ("pointer formats")
+  {
+    CHECK (vf2t ("&s") == vt ("s"));
+    CHECK (vf2t ("&o") == vt ("o"));
+    CHECK (vf2t ("&g") == vt ("g"));
+  }
+
+  SECTION ("convenience formats")
+  {
+    CHECK (vf2t ("^a&ay") == vt ("aay"));
+    CHECK (vf2t ("^a&o") == vt ("ao"));
+    CHECK (vf2t ("^a&s") == vt ("as"));
+    CHECK (vf2t ("^aay") == vt ("aay"));
+    CHECK (vf2t ("^as") == vt ("as"));
+    CHECK (vf2t ("^ao") == vt ("ao"));
+    CHECK (vf2t ("^ay") == vt ("ay"));
+    CHECK (vf2t ("^&ay") == vt ("ay"));
+  }
+
+  SECTION ("maybe formats")
+  {
+    CHECK (vf2t ("mai") == vt ("mai"));
+    CHECK (vf2t ("ms") == vt ("ms"));
+    CHECK (vf2t ("mv") == vt ("mv"));
+    CHECK (vf2t ("m*") == vt ("m*"));
+    CHECK (vf2t ("m@s") == vt ("ms"));
+    CHECK (vf2t ("m&s") == vt ("ms"));
+    CHECK (vf2t ("m^as") == vt ("mas"));
+    CHECK (vf2t ("mb") == vt ("mb"));
+    CHECK (vf2t ("m{?*}") == vt ("m{?*}"));
+    CHECK (vf2t ("m(bb)") == vt ("m(bb)"));
+    CHECK (vf2t ("mmb") == vt ("mmb"));
+  }
+
+  SECTION ("entry formats")
+  {
+    CHECK (vf2t ("{bs}") == vt ("{bs}"));
+    CHECK (vf2t ("{ss}") == vt ("{ss}"));
+    CHECK (vf2t ("{?s}") == vt ("{?s}"));
+    CHECK (vf2t ("{@bs}") == vt ("{bs}"));
+    CHECK (vf2t ("{@ss}") == vt ("{ss}"));
+    CHECK (vf2t ("{&ss}") == vt ("{ss}"));
+    CHECK (vf2t ("{&os}") == vt ("{os}"));
+    CHECK (vf2t ("{&gs}") == vt ("{gs}"));
+  }
+
+  SECTION ("tuple formats")
+  {
+    CHECK (vf2t ("()") == vt ("()"));
+    CHECK (vf2t ("(@s&s)") == vt ("(ss)"));
+  }
 }
