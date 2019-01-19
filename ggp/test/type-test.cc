@@ -321,10 +321,56 @@ auto maybe_maybe_bool () -> std::vector<Types>
   return {special_maybe_bool_types (), special_maybe_bool_types (), bool_types[0]};
 }
 
+auto
+entry_bool_bool () -> std::vector<Types>
+{
+  return {Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}, Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}};
+}
+
+auto
+entry_string_bool () -> std::vector<Types>
+{
+  return {Types {{{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}, {{NullablePointer {{Pointer {{PlainType {{type_gchar ()}}}}}}}}}, Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}};
+}
+
+auto
+entry_at_bool_bool () -> std::vector<Types>
+{
+  return {Types {{{Pointer {{PlainType {{VariantTyped {"GVariant"s, {{VariantType {{Leaf::Basic {{Leaf::bool_}}}}}}}}}}}}}, {{NullablePointer {{Pointer {{PlainType {{VariantTyped {"GVariant"s, {{VariantType {{Leaf::Basic {{Leaf::bool_}}}}}}}}}}}}}}}}, Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}};
+}
+
+auto
+entry_any_basic_bool () -> std::vector<Types>
+{
+  return {Types {{{Pointer {{PlainType {{VariantTyped {"GVariant"s, {{VariantType {{Leaf::any_basic}}}}}}}}}}}, {{NullablePointer {{Pointer {{PlainType {{VariantTyped {"GVariant"s, {{VariantType {{Leaf::any_basic}}}}}}}}}}}}}}, Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}};
+}
+
+auto
+entry_pointer_to_string_bool () -> std::vector<Types>
+{
+  return {Types {{{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}, {{NullablePointer {{Pointer {{Const {{PlainType {{type_gchar ()}}}}}}}}}}}, Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}};
+}
+
+auto
+tuple_empty () -> std::vector<Types>
+{
+  return {};
+}
+
+auto
+tuple_bool () -> std::vector<Types>
+{
+  return {Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}};
+}
+
+auto
+tuple_bool_bool () -> std::vector<Types>
+{
+  return {Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}, Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}};
+}
+
 } // anonymous namespace
 
-// TODO: See "gvariant format strings" in devhelp for information
-// about expected types for a format
 TEST_CASE ("format to types", "[type]")
 {
   SECTION ("basic type formats")
@@ -426,11 +472,17 @@ TEST_CASE ("format to types", "[type]")
 
   SECTION ("entry formats")
   {
-    // TODO
+    CHECK (tfs ("{bb}") == entry_bool_bool ());
+    CHECK (tfs ("{sb}") == entry_string_bool ());
+    CHECK (tfs ("{@bb}") == entry_at_bool_bool ());
+    CHECK (tfs ("{?b}") == entry_any_basic_bool ());
+    CHECK (tfs ("{&sb}") == entry_pointer_to_string_bool ());
   }
 
   SECTION ("tuple formats")
   {
-    // TODO
+    CHECK (tfs ("()") == tuple_empty ());
+    CHECK (tfs ("(b)") == tuple_bool ());
+    CHECK (tfs ("(bb)") == tuple_bool_bool ());
   }
 }

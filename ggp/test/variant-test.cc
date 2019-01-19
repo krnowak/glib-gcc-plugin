@@ -423,7 +423,6 @@ TEST_CASE ("Variant formats are parsed", "[variant]")
   SECTION ("entry formats")
   {
     CHECK (vffs ("{bb}") == opt (VariantFormat {{VF::Entry {{{Leaf::Basic {{Leaf::bool_}}}}, basicf (Leaf::bool_)}}}));
-    CHECK (vffs ("{bb}") == opt (VariantFormat {{VF::Entry {{{Leaf::Basic {{Leaf::bool_}}}}, basicf (Leaf::bool_)}}}));
     CHECK (vffs ("{sb}") == opt (VariantFormat {{VF::Entry {{{Leaf::StringType {{Leaf::string_}}}}, basicf (Leaf::bool_)}}}));
     CHECK (vffs ("{@bb}") == opt (VariantFormat {{VF::Entry {{{VF::AtEntryKeyType {{{Leaf::Basic {{Leaf::bool_}}}}}}}, basicf (Leaf::bool_)}}}));
     CHECK (vffs ("{?b}") == opt (VariantFormat {{VF::Entry {{{VF::AtEntryKeyType {{{Leaf::any_basic}}}}}, basicf (Leaf::bool_)}}}));

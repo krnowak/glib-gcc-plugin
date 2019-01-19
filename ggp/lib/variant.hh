@@ -276,6 +276,13 @@ GGP_LIB_VARIANT_STRUCT (MaybeBool,
 
 } // namespace VF
 
+
+// TODO: VariantFormatForNew and VariantFormatForGet? g_variant_new
+// does not allow *, ? or r as a first letter in format string.
+
+// TODO: See how GVariantIter is using formats or types.
+
+// TODO: See how GVariantBuilder is using formats or types.
 struct VariantFormat
 {
   using V = std::variant
