@@ -312,6 +312,38 @@ GGP_LIB_VARIANT_OPS (VariantFormat);
 
 } // namespace Ggp::Lib
 
+// NOTES:
+//
+// g_variant_new does not allow *, ?, @ nor r as a first thing in the
+// format string.
+//
+// g_variant_{n_children,get_child,get_child_value} - only v, m, a, (,
+// r, {.
+//
+// g_variant_get_maybe - only on m.
+//
+// g_variant_lookup{,value} - only a{s*} or a{o*}. BTW. in docs:
+//
+// In the event that @dictionary has a value type other than v then
+// @expected_type must directly match the key type and it is used to
+// unpack the value directly or an error occurs.
+//
+// it should be "match the value type" not "the key type".
+//
+// GVariantBuilder init allowed types
+// v, a, m, {, r, (
+//
+// GVariantIter new/init takes GVariant with the same types as
+// GVariantBuilder
+//
+// GVariantDict new/init takes GVariant of a{sv} type only.
+//
+// g_variant_type_element accepts only arrays and maybes.
+//
+// g_variant_type_{n_items,first,next} work only on non-r tuples and
+// on entries.
+//
+// g_variant_type_{key,value} - only entries
 #else
 
 #if GGP_LIB_VARIANT_HH_CHECK_VALUE != GGP_LIB_VARIANT_HH_CHECK

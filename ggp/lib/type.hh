@@ -115,12 +115,18 @@ using NullablePointer = Pointer;
 // For types we don't support (restrict, volatile, _Atomic qualifiers,
 // function types, etc…)
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS(Meh);
+// For cases when we pass a literal NULL to the function.
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS(NullPointer);
 
+
+// TODO: Remove NullPointer, create a RunType type that either
+// contains Variant<Type, NullPointer>.
 GGP_LIB_VARIANT_STRUCT(Type,
                        Const,
                        Pointer,
                        //NullablePointer,
                        PlainType,
+                       NullPointer,
                        Meh);
 
 GGP_LIB_STRUCT (Types,

@@ -149,6 +149,12 @@ print_meh (std::ostream& os, Meh const&) -> void
 }
 
 auto
+print_null_pointer (std::ostream& os, NullPointer const&) -> void
+{
+  os << "null";
+}
+
+auto
 print_type (std::ostream& os, Type const& type) -> void
 {
   auto vh {VisitHelper {
@@ -156,6 +162,7 @@ print_type (std::ostream& os, Type const& type) -> void
     [&os](Pointer const& pointer) mutable { print_pointer (os, pointer); },
     //[&os](NullablePointer const& nullable_pointer) mutable { print_nullable_pointer (os, nullable_pointer); },
     [&os](PlainType const& plain_type) mutable { print_plain_type (os, plain_type); },
+    [&os](NullPointer const& null_pointer) mutable { print_null_pointer (os, null_pointer); },
     [&os](Meh const& meh) mutable { print_meh (os, meh); },
   }};
 

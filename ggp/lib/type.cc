@@ -434,34 +434,22 @@ expected_types_for_format (VariantFormat const& format)
 namespace
 {
 
-struct StrippedType
-{
-  using V = std::variant
-    <
-    Pointer,
-    PlainType,
-    Meh
-    >;
+GGP_LIB_VARIANT_STRUCT_ONLY(StrippedType,
+                            Pointer,
+                            PlainType,
+                            NullPointer,
+                            Meh);
 
-  V v;
-};
-
-struct SimpleType
-{
-  using V= std::variant
-    <
-    Const,
-    Pointer,
-    PlainType
-    >;
-
-  V v;
-};
+GGP_LIB_VARIANT_STRUCT_ONLY(SimpleType,
+                            Const,
+                            Pointer,
+                            PlainType,
+                            NullPointer);
 
 template <typename TargetType = SimpleType,
           typename SubSet = void /* whatever, it will be deduced from function call */>
-TargetType
-repackage (SubSet const& te)
+auto
+repackage (SubSet const& te) -> TargetType
 {
   // TODO: use generalize instead?
   auto vh {VisitHelper {
@@ -470,35 +458,36 @@ repackage (SubSet const& te)
   return std::visit (vh, te.v);
 }
 
-StrippedType
-strip_qualifiers (Type const& type)
+auto
+strip_qualifiers (Type const& type) -> StrippedType
 {
   auto vh {VisitHelper {
-    [](Const const& cnst) { return repackage<StrippedType> (cnst); },
+    [](Const const& const_) { return repackage<StrippedType> (const_); },
     [](Pointer const& other) { return StrippedType {{other}}; },
     //[](NullablePointer const& other) { return StrippedType {{repackage<Pointer> (other)}}; },
     [](PlainType const& other) { return StrippedType {{other}}; },
+    [](NullPointer const& null_pointer) { return StrippedType {{null_pointer}}; },
     [](Meh const& other) { return StrippedType {{other}}; },
   }};
   return std::visit (vh, type.v);
 }
 
-bool
+auto
 check_integral (Integral const& from,
-                Integral const& to)
+                Integral const& to) -> bool
 {
+  /*
   if (from.name != to.name)
   {
-    /*
     auto const& names = to.additional_names;
     if (std::find (names.cbegin(), names.cend(), from.name) == names.cend())
     {
       return false;
     }
-    */
     return false;
     // TODO: check accidental names
   }
+  */
   if (from.signedness != Signedness::Any && from.signedness != to.signedness)
   {
     return false;
@@ -510,21 +499,21 @@ check_integral (Integral const& from,
   return true;
 }
 
-bool
+auto
 check_real (Real const& from,
-            Real const& to)
+            Real const& to) -> bool
 {
+  /*
   if (from.name != to.name)
   {
-    /*
     auto const& names = to.additional_names;
     if (std::find (names.cbegin(), names.cend(), from.name) == names.cend())
     {
       return false;
     }
-    */
     return false;
   }
+  */
   if (from.size_in_bytes != to.size_in_bytes)
   {
     return false;
@@ -532,9 +521,9 @@ check_real (Real const& from,
   return true;
 }
 
-bool
+auto
 check_variant_typed (VariantTyped const& from,
-                     VariantTyped const& to)
+                     VariantTyped const& to) -> bool
 {
   if (from.name != to.name)
   {
@@ -544,9 +533,9 @@ check_variant_typed (VariantTyped const& from,
   return true;
 }
 
-bool
+auto
 check_plain_type (PlainType const& pt_from,
-                  PlainType const& pt_to)
+                  PlainType const& pt_to) -> bool
 {
   auto vh {VisitHelper {
     [](Integral const& i_from,
@@ -561,17 +550,19 @@ check_plain_type (PlainType const& pt_from,
   return std::visit (vh, pt_from.v, pt_to.v);
 }
 
-bool
+auto
 check_simple_type (SimpleType const& from,
-                   SimpleType const& to)
+                   SimpleType const& to) -> bool
 {
   auto vh {VisitHelper {
-    [](Const const& cnst_from,
-       Const const& cnst_to) { return check_simple_type (repackage (cnst_from),
-                                                         repackage (cnst_to)); },
+    [](Const const& const_from,
+       Const const& const_to) { return check_simple_type (repackage (const_from),
+                                                          repackage (const_to)); },
     [](Pointer const& ptr_from,
        Pointer const& ptr_to) { return check_simple_type (repackage (ptr_from),
                                                           repackage (ptr_to)); },
+    [](NullPointer const& /*from*/,
+       Pointer const& /*to*/) { return true; },
     [](PlainType const& pt_from,
        PlainType const& pt_to) { return check_plain_type (pt_from, pt_to); },
     [](auto const&,
@@ -580,19 +571,19 @@ check_simple_type (SimpleType const& from,
   return std::visit (vh, from.v, to.v);
 }
 
-bool
+auto
 first_pointer (Pointer const& ptr_from,
-               Pointer const& ptr_to)
+               Pointer const& ptr_to) -> bool
 {
   auto vh {VisitHelper {
-    [](Const const& cnst_from,
-       Const const& cnst_to) { return check_simple_type (repackage (cnst_from),
-                                                         repackage (cnst_to)); },
+    [](Const const& const_from,
+       Const const& const_to) { return check_simple_type (repackage (const_from),
+                                                          repackage (const_to)); },
     [](Const const&,
        auto const&) { return false; },
     [](auto const& other_from,
-       Const const& cnst_to) { return check_simple_type (SimpleType {{other_from}},
-                                                         repackage (cnst_to)); },
+       Const const& const_to) { return check_simple_type (SimpleType {{other_from}},
+                                                          repackage (const_to)); },
     [](auto const& other_from,
        auto const& other_to) { return check_simple_type (SimpleType {{other_from}},
                                                          SimpleType {{other_to}}); },
@@ -602,9 +593,9 @@ first_pointer (Pointer const& ptr_from,
 
 } // anonymous namespace
 
-bool
+auto
 type_is_convertible_to_type (Type const& from,
-                             Type const& to)
+                             Type const& to) -> bool
 {
   auto stripped_from {strip_qualifiers (from)};
   auto stripped_to {strip_qualifiers (to)};
