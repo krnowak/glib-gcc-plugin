@@ -293,19 +293,38 @@ maybe_real_type (Real const& r) -> std::vector<Types>
 }
 
 auto
-maybe_any_basic_to_any_type_entry () -> std::vector<Types>
+maybe_entry_any_basic_any_type () -> std::vector<Types>
 {
-  auto any_basic_variant_types {any_basic_variant ()};
-  auto any_type_variant_types {any_type_variant ()};
+  auto any_basic_variant_types {maybe_any_basic_variant ()};
+  auto any_type_variant_types {maybe_any_type_variant ()};
 
   return {special_maybe_bool_types (), any_basic_variant_types[0], any_type_variant_types[0]};
 }
 
 auto
-maybe_bool_bool_tuple () -> std::vector<Types>
+maybe_entry_string_tuple_bool_variant () -> std::vector<Types>
+{
+  auto string_types {string_type ()};
+  auto gboolean_types {integral_type (type_gboolean ())};
+  auto variant_types {unspecified_variant ()};
+
+  return {special_maybe_bool_types (), string_types[0], gboolean_types[0], variant_types[0]};
+}
+
+auto
+maybe_tuple_bool_bool () -> std::vector<Types>
 {
   auto bool_types {integral_type (type_gboolean ())};
+
   return {special_maybe_bool_types (), bool_types[0], bool_types[0]};
+}
+
+auto
+maybe_tuple_variant_variant () -> std::vector<Types>
+{
+  auto variant_types {unspecified_variant ()};
+
+  return {special_maybe_bool_types (), variant_types[0], variant_types[0]};
 }
 
 auto
@@ -367,6 +386,16 @@ auto
 tuple_bool_bool () -> std::vector<Types>
 {
   return {Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}, Types {{{PlainType {{type_gboolean ()}}}}, {{NullablePointer {{PlainType {{type_gboolean ()}}}}}}}};
+}
+
+auto
+tuple_variant_variant () -> std::vector<Types>
+{
+  auto variants {unspecified_variant ()};
+
+  variants.push_back (variants[0]);
+
+  return variants;
 }
 
 } // anonymous namespace
@@ -447,10 +476,8 @@ TEST_CASE ("format to types", "[type]")
     CHECK (tfs ("m@?") == tfs ("m?"));
     CHECK (tfs ("mr") == maybe_any_tuple_variant ());
     CHECK (tfs ("m@r") == tfs ("mr"));
-    CHECK (tfs ("mv") == maybe_variant_variant ());
-    CHECK (tfs ("m@v") == tfs ("mv"));
-    CHECK (tfs ("ms") == maybe_string_variant ());
-    CHECK (tfs ("m@s") == tfs ("ms"));
+    CHECK (tfs ("m@v") == maybe_variant_variant ());
+    CHECK (tfs ("m@s") == maybe_string_variant ());
     CHECK (tfs ("m&s") == maybe_pointer_to_string ());
     CHECK (tfs ("m&o") == maybe_pointer_to_string ());
     CHECK (tfs ("m&g") == maybe_pointer_to_string ());
@@ -464,8 +491,10 @@ TEST_CASE ("format to types", "[type]")
     CHECK (tfs ("m^&ay") == maybe_convenience_amp_a_y ());
     CHECK (tfs ("mb") == maybe_integral_type (type_gboolean ()));
     CHECK (tfs ("md") == maybe_real_type (type_gdouble ()));
-    CHECK (tfs ("m{?*}") == maybe_any_basic_to_any_type_entry ());
-    CHECK (tfs ("m(bb)") == maybe_bool_bool_tuple ());
+    CHECK (tfs ("m{?*}") == maybe_entry_any_basic_any_type ());
+    CHECK (tfs ("m{s(bv)}") == maybe_entry_string_tuple_bool_variant ());
+    CHECK (tfs ("m(bb)") == maybe_tuple_bool_bool ());
+    CHECK (tfs ("m(vv)") == maybe_tuple_variant_variant ());
     CHECK (tfs ("mms") == maybe_maybe_string ());
     CHECK (tfs ("mmb") == maybe_maybe_bool ());
   }
@@ -484,5 +513,6 @@ TEST_CASE ("format to types", "[type]")
     CHECK (tfs ("()") == tuple_empty ());
     CHECK (tfs ("(b)") == tuple_bool ());
     CHECK (tfs ("(bb)") == tuple_bool_bool ());
+    CHECK (tfs ("(vv)") == tuple_variant_variant ());
   }
 }

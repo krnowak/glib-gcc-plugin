@@ -65,6 +65,7 @@ print_pointer (std::ostream& os, Pointer const& pointer) -> void
   os << " >";
 }
 
+/*
 auto
 print_nullable_pointer (std::ostream& os, NullablePointer const& nullable_pointer) -> void
 {
@@ -72,6 +73,7 @@ print_nullable_pointer (std::ostream& os, NullablePointer const& nullable_pointe
   print_pointer_base (os, nullable_pointer);
   os << " >";
 }
+*/
 
 auto
 print_integral (std::ostream& os, Integral const& integral) -> void
@@ -152,7 +154,7 @@ print_type (std::ostream& os, Type const& type) -> void
   auto vh {VisitHelper {
     [&os](Const const& const_) mutable { print_const (os, const_); },
     [&os](Pointer const& pointer) mutable { print_pointer (os, pointer); },
-    [&os](NullablePointer const& nullable_pointer) mutable { print_nullable_pointer (os, nullable_pointer); },
+    //[&os](NullablePointer const& nullable_pointer) mutable { print_nullable_pointer (os, nullable_pointer); },
     [&os](PlainType const& plain_type) mutable { print_plain_type (os, plain_type); },
     [&os](Meh const& meh) mutable { print_meh (os, meh); },
   }};

@@ -92,11 +92,25 @@ GGP_LIB_VARIANT_STRUCT(PointerBase,
                        PlainType);
 struct Pointer : PointerBase
 {};
-struct NullablePointer : PointerBase
-{};
-
 GGP_LIB_VARIANT_OPS(Pointer);
-GGP_LIB_VARIANT_OPS(NullablePointer);
+
+// TODO: Replace "using" with the code below when we start needing a
+// differentiation between nullable pointers, non-nullable pointers
+// and not-yet-introduced dependent pointers.
+// struct NullablePointer : PointerBase
+// {};
+// GGP_LIB_VARIANT_OPS(NullablePointer);
+using NullablePointer = Pointer;
+
+// TODO: struct DependentPointer : PointerBase {}; A dependent pointer
+// would be a pointer dependent on a value of a special boolean
+// parameter (as in GVariant maybe types). If the bool value is true,
+// then pointer in "new" format can't be null, but can be null in
+// "get" format. When false, it can be whatever, it's ignored. We
+// could warn about passing non-null pointers in this case, though.
+//
+// TODO: Describe out pointers? Usually they are non-null, but for
+// maybe types, they may be null. Pointer<typename New, typename Get>?
 
 // For types we don't support (restrict, volatile, _Atomic qualifiers,
 // function types, etc…)
@@ -105,7 +119,7 @@ GGP_LIB_TRIVIAL_TYPE_WITH_OPS(Meh);
 GGP_LIB_VARIANT_STRUCT(Type,
                        Const,
                        Pointer,
-                       NullablePointer,
+                       //NullablePointer,
                        PlainType,
                        Meh);
 
