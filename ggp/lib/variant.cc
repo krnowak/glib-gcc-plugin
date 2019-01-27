@@ -430,6 +430,25 @@ VariantType::is_definite () const -> bool
   return std::visit (vh, this->v);
 }
 
+auto
+VariantType::get_class () const -> VC::Class
+{
+  auto vh {VisitHelper {
+    [](Leaf::Basic const&) { return VC::Class {{VC::basic}}; },
+    [](Leaf::AnyBasic const&) { return VC::Class {{VC::basic}}; },
+    [](Leaf::StringType const&) { return VC::Class {{VC::basic}}; },
+    [](VT::Maybe const&) { return VC::Class {{VC::maybe}}; },
+    [](VT::Tuple const&) { return VC::Class {{VC::tuple}}; },
+    [](VT::Array const&) { return VC::Class {{VC::array}}; },
+    [](VT::Entry const&) { return VC::Class {{VC::entry}}; },
+    [](Leaf::Variant const&) { return VC::Class {{VC::variant}}; },
+    [](Leaf::AnyTuple const&) { return VC::Class {{VC::tuple}}; },
+    [](Leaf::AnyType const&) { return VC::Class {{VC::any}}; },
+  }};
+
+  return std::visit (vh, this->v);
+}
+
 namespace
 {
 

@@ -1,6 +1,6 @@
 /* This file is part of glib-gcc-plugin.
  *
- * Copyright 2017, 2018 Krzesimir Nowak
+ * Copyright 2017, 2018, 2019 Krzesimir Nowak
  *
  * gcc-glib-plugin is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -74,21 +74,21 @@ must_get_string (tree expr)
 
 enum class FormatType
 {
-  Get,
-  Set
+  New,
+  Get
 };
 
 std::optional<FormatType>
 get_format_type (std::string const& type_string)
 {
+  if (type_string == "new")
+  {
+    return {FormatType::New};
+  }
+
   if (type_string == "get")
   {
     return {FormatType::Get};
-  }
-
-  if (type_string == "set")
-  {
-    return {FormatType::Set};
   }
 
   return {};
@@ -237,6 +237,7 @@ auto get_call_sites(tree function_decl) -> std::vector<CallSite>
 
 struct FormatArgs
 {
+  FormatType type;
   char const* format;
   std::vector<tree> args;
 };
@@ -283,7 +284,13 @@ auto get_format_args(CallSite const& call_site) -> std::optional<FormatArgs>
     return {};
   }
 
-  return {{format, format_arg_params}};
+  return {{format_info.type, format, format_arg_params}};
+}
+
+auto
+tree_to_type (tree /*arg*/) -> Lib::Type {
+  // TODO: see dumps to figure this out
+  return {{Lib::Meh {}}};
 }
 
 void
@@ -317,7 +324,25 @@ ggp_vc_finish_parse_function (void* gcc_data,
     {
       warning (0, "expected %lu parameters, got %lu", types.size(), maybe_format_args->args.size());
     }
-    // TODO: compare types to actual passed parameters.
+    auto pick_type = [](FormatType type) -> Lib::Type const& (*)(Lib::Types const&) {
+                       if (type == FormatType::New)
+                         return [](Lib::Types const& types) -> Lib::Type const&
+                         {
+                           return types.for_new;
+                         };
+                       else
+                         return [](Lib::Types const& types) -> Lib::Type const&
+                         {
+                          return types.for_get;
+                         };
+                     }(maybe_format_args->type);
+    for (auto idx {0u}; idx < types.size (); ++idx)
+    {
+      if (!Lib::type_is_convertible_to_type (tree_to_type (maybe_format_args->args[idx]), pick_type (types[idx])))
+      {
+        warning (0, "invalid arg %u", idx);
+      }
+    }
   }
 }
 

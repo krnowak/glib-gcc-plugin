@@ -125,6 +125,36 @@ GGP_LIB_STRUCT (Entry,
 
 } // namespace VT
 
+namespace VC
+{
+
+/* This does not follow the GVariantClass type. */
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Basic);
+inline constexpr Basic basic {};
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Variant);
+inline constexpr Variant variant {};
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Tuple);
+inline constexpr Tuple tuple {};
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Maybe);
+inline constexpr Maybe maybe {};
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Array);
+inline constexpr Array array {};
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Entry);
+inline constexpr Entry entry {};
+GGP_LIB_TRIVIAL_TYPE_WITH_OPS (Any);
+inline constexpr Any any {};
+
+GGP_LIB_VARIANT_STRUCT (Class,
+                        Basic,
+                        Variant,
+                        Tuple,
+                        Maybe,
+                        Array,
+                        Entry,
+                        Any);
+
+} // namespace Ggp::Lib::VC
+
 struct VariantParseError
 {
   std::size_t offset;
@@ -162,7 +192,10 @@ struct VariantType
   from_string (std::string_view const& string) -> VariantResult<VariantType>;
 
   auto
-  is_definite() const -> bool;
+  is_definite () const -> bool;
+
+  auto
+  get_class () const -> VC::Class;
 
   V v;
 };

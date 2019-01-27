@@ -11,10 +11,10 @@ typedef struct
 #define NULL ((void *) 0)
 
 static GVariant *
-variant_set (int a, const char *format, ...)  __attribute__ ((glib_variant("set", 2, 3)));
+variant_new (int a, const char *format, ...)  __attribute__ ((glib_variant("new", 2, 3)));
 
 static GVariant *
-variant_set (int a, const char *format, ...)
+variant_new (int a, const char *format, ...)
 {
   return NULL;
 }
