@@ -119,8 +119,9 @@ GGP_LIB_TRIVIAL_TYPE_WITH_OPS(Meh);
 GGP_LIB_TRIVIAL_TYPE_WITH_OPS(NullPointer);
 
 
-// TODO: Remove NullPointer, create a RunType type that either
-// contains Variant<Type, NullPointer>.
+// TODO: Remove NullPointer and Meh, create a RunType type that either
+// contains Variant<Type, NullPointer, Meh> or Variant<Const, Pointer,
+// PlainType, NullPointer, Meh>.
 GGP_LIB_VARIANT_STRUCT(Type,
                        Const,
                        Pointer,
@@ -138,6 +139,40 @@ expected_types_for_format (VariantFormat const& format);
 
 bool
 type_is_convertible_to_type (Type const& from, Type const& to);
+
+class TypeBuilder
+{
+public:
+  TypeBuilder ();
+  ~TypeBuilder ();
+  TypeBuilder (TypeBuilder const&) = delete;
+  TypeBuilder (TypeBuilder&&) = default;
+  TypeBuilder& operator= (TypeBuilder const&) = delete;
+  TypeBuilder& operator= (TypeBuilder&&) = default;
+
+  auto
+  add_plain_type (PlainType plain_type) -> void;
+
+  auto
+  add_const () -> void;
+
+  auto
+  add_pointer () -> void;
+
+  auto
+  add_meh () -> void;
+
+  auto
+  add_null_pointer () -> void;
+
+  auto
+  build_type () const -> Type;
+
+private:
+  struct TypeBuilderPrivate;
+
+  std::unique_ptr<TypeBuilderPrivate> priv;
+};
 
 } // namespace Ggp::Lib
 

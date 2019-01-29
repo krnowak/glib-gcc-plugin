@@ -179,6 +179,7 @@ ggp_vc_start_parse_function (void* /* gcc_data */,
 
 struct CallSite
 {
+  std::string name;
   tree call_expr;
   tree attribute;
 };
@@ -226,7 +227,7 @@ auto get_call_sites(tree function_decl) -> std::vector<CallSite>
     {
       if (is_attribute_p ("glib_variant", TREE_PURPOSE (attr)))
       {
-        call_sites.push_back ({call_expr, attr});
+        call_sites.push_back ({IDENTIFIER_POINTER (DECL_NAME (function_decl)), call_expr, attr});
         break;
       }
     }
@@ -288,8 +289,13 @@ auto get_format_args(CallSite const& call_site) -> std::optional<FormatArgs>
 }
 
 auto
-tree_to_type (tree /*arg*/) -> Lib::Type {
-  // TODO: see dumps to figure this out
+tree_to_type (tree arg) -> Lib::Type {
+  warning (0, "dump of a parameter");
+  dump_node (arg, TDF_ADDRESS, stderr);
+  iterate_tree (arg, [](tree /*tree*/)
+                     {
+                       // TODO: see dumps to figure this out
+                     });
   return {{Lib::Meh {}}};
 }
 
@@ -299,9 +305,9 @@ ggp_vc_finish_parse_function (void* gcc_data,
 {
   auto function_decl = static_cast<tree> (gcc_data);
   gcc_assert (TREE_CODE (function_decl) == FUNCTION_DECL);
-  warning (0, "Tree dump of %s",
-           IDENTIFIER_POINTER (DECL_NAME (function_decl)));
-  dump_node (function_decl, TDF_ADDRESS, stderr);
+  // warning (0, "Tree dump of %s",
+  //          IDENTIFIER_POINTER (DECL_NAME (function_decl)));
+  // dump_node (function_decl, TDF_ADDRESS, stderr);
 
 
   for (auto const& call_site : get_call_sites (function_decl))
@@ -313,6 +319,7 @@ ggp_vc_finish_parse_function (void* gcc_data,
       continue;
     }
 
+    warning (0, "calling function %s", call_site.name.c_str ());
     auto const mvf = Lib::VariantFormat::from_string (maybe_format_args->format);
     if (!mvf)
     {

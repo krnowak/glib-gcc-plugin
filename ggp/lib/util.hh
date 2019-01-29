@@ -17,11 +17,14 @@
  */
 
 /*< check: GGP_LIB_UTIL_HH_CHECK >*/
+/*< lib: value.hh >*/
+/*< lib: typeutil.hh >*/
 /*< stl: cassert >*/
 /*< stl: memory >*/
 /*< stl: type_traits >*/
 /*< stl: utility >*/
 /*< stl: variant >*/
+
 
 #ifndef GGP_LIB_UTIL_HH
 #define GGP_LIB_UTIL_HH
@@ -109,143 +112,44 @@
 namespace Ggp::Lib
 {
 
-// after it is moved, it can only be destroyed
-template <typename T>
-class Value
+namespace ThisNS = ::Ggp::Lib;
+
+template<class... TypeP>
+struct VisitHelper : TypeP...
 {
-public:
-  Value () = delete;
-  template <typename... Args>
-  Value (Args&&... args)
-    : ptr {std::make_unique<T> (std::forward<Args> (args)...)}
-  {}
-
-  Value (Value&& u) noexcept
-    : ptr {std::move (u.ptr)}
-  {}
-
-  template <typename U>
-  Value (Value<U>&& u) noexcept
-    : ptr {std::move (u.ptr)}
-  {}
-
-  template <typename U>
-  Value (Value<U> const& u)
-    : ptr {std::make_unique<T> (*(u.ptr))}
-  {}
-
-  Value (Value const& u)
-    : ptr {std::make_unique<T> (*(u.ptr))}
-  {}
-
-  ~Value () noexcept = default;
-
-  template <typename U>
-  auto
-  operator= (Value<U>&& u) noexcept -> Value&
-  {
-    Value tmp {std::move (u)};
-
-    swap (tmp);
-    return *this;
-  }
-
-  template <typename U>
-  auto
-  operator= (const Value<U>& u) -> Value&
-  {
-    Value tmp {u};
-    swap (tmp);
-    return *this;
-  }
-
-  auto
-  swap (Value& other) noexcept -> void
-  {
-    using std::swap;
-
-    swap (ptr, other.ptr);
-  }
-
-  operator T const& () const noexcept
-  {
-    auto p {ptr.get ()};
-    assert (p != nullptr);
-    return *p;
-  }
-
-  operator T& () noexcept
-  {
-    auto p {ptr.get ()};
-    assert (p != nullptr);
-    return *p;
-  }
-
-  auto
-  operator-> () noexcept -> T*
-  {
-    auto p {ptr.get ()};
-    assert (p != nullptr);
-    return p;
-  }
-
-  auto
-  operator-> () const noexcept -> T const*
-  {
-    auto p {ptr.get ()};
-    assert (p != nullptr);
-    return p;
-  }
-
-private:
-  std::unique_ptr<T> ptr;
+  using TypeP::operator()...;
 };
+template<class... TypeP>
+VisitHelper(TypeP...) -> VisitHelper<TypeP...>;
 
-template <typename T, typename U>
-inline auto
-operator== (Value<T> const& lhs, Value<U> const& rhs) noexcept -> bool
-{
-  // This is to force the comparison after applying the implicit
-  // conversion operators.
-  return [](T const& vlhs, U const& vrhs) -> bool
-  {
-    return vlhs == vrhs;
-  } (lhs, rhs);
-}
-
-template <typename T, typename U>
-inline auto
-operator!= (Value<T> const& lhs, Value<U> const& rhs) noexcept -> bool
-{
-  return !(lhs == rhs);
-}
-
-// TODO: drop it if unused
-template <typename T, typename... Args>
+template <typename SuperVariant,
+          typename SubVariant,
+          typename = std::enable_if_t<DetailUtilHh::IsStdVariantV<SuperVariant> &&
+                                      DetailUtilHh::IsStdVariantV<SubVariant>>>
 auto
-value (Args&&... args) -> Value<T>
+repackage_v (SubVariant&& v) -> SuperVariant
 {
-  return {std::forward<Args> (args)...};
+  auto vh {ThisNS::VisitHelper {
+    [](auto&& value)
+    {
+      using ArgType = decltype (value);
+      using ValueArgType = ThisNS::DropQualifiersT<ArgType>;
+      using ArgTypeInVariant = ThisNS::DetailUtilHh::ArgTypeInVariant<ValueArgType, SuperVariant>;
+
+      return SuperVariant {std::in_place_type<ArgTypeInVariant>, std::forward<ArgType> (value)};
+    },
+  }};
+  return std::visit (vh, std::forward<SubVariant> (v));
 }
 
-template<class... TypeP> struct VisitHelper : TypeP... { using TypeP::operator()...; };
-template<class... TypeP> VisitHelper(TypeP...) -> VisitHelper<TypeP...>;
-
-template <typename VariantTo,
-          typename VariantFrom,
-          typename = std::enable_if<Detail::is_std_variant_v<VariantTo> &&
-                                    Detail::is_std_variant_v<VariantFrom>>>
+template <typename SuperVariantStruct,
+          typename SubVariantStruct>
 auto
-generalize (VariantFrom&& v) -> VariantTo
+repackage (SubVariantStruct const& svs) -> SuperVariantStruct
 {
-  return std::visit ([](auto&& value)
-                     {
-                       using ArgType = decltype (value);
-                       using ArgTypeInVariant = std::decay_t<ArgType>;
-                       Detail::std_variant_type_check<ArgTypeInVariant, VariantTo> ();
-                       return VariantTo {std::in_place_type<ArgTypeInVariant>, std::forward<ArgType> (value)};
-                     },
-                     std::forward<VariantFrom> (v));
+  using SuperVariant = ThisNS::DropQualifiersT<decltype(std::declval<SuperVariantStruct> ().v)>;
+
+  return {ThisNS::repackage_v<SuperVariant> (svs.v)};
 }
 
 template <typename OkType, typename FailureType>
@@ -255,9 +159,9 @@ struct Result
 
   template <typename OkHandler, typename FailureHandler>
   auto
-  handle(OkHandler ok_handler, FailureHandler failure_handler) /* -> computed */
+  handle (OkHandler ok_handler, FailureHandler failure_handler) /* -> deduced */
   {
-    auto vh {VisitHelper {ok_handler, failure_handler}};
+    auto vh {ThisNS::VisitHelper {ok_handler, failure_handler}};
     return std::visit (vh, this->v);
   }
 
@@ -304,6 +208,33 @@ struct Result
 
   std::variant<OkType, FailureType> v;
 };
+
+template <typename Container>
+struct ReverseAdapter
+{
+  Container& container;
+};
+
+template <typename Container>
+auto
+begin (ReverseAdapter<Container> adapter) /* -> deduced */
+{
+  return std::rbegin (adapter.container);
+}
+
+template <typename Container>
+auto
+end (ReverseAdapter<Container> adapter) /* -> deduced */
+{
+  return std::rend (adapter.container);
+}
+
+template <typename Container>
+auto
+reverse (Container& container) -> ReverseAdapter<Container>
+{
+  return { container };
+}
 
 } // namespace Ggp::Lib
 

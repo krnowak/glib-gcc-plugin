@@ -18,6 +18,7 @@
 
 /*< lib: type.hh >*/
 /*< stl: algorithm >*/
+/*< stl: optional >*/
 /*< sizeof: int >*/
 
 namespace Ggp::Lib
@@ -446,18 +447,6 @@ GGP_LIB_VARIANT_STRUCT_ONLY(SimpleType,
                             PlainType,
                             NullPointer);
 
-template <typename TargetType = SimpleType,
-          typename SubSet = void /* whatever, it will be deduced from function call */>
-auto
-repackage (SubSet const& te) -> TargetType
-{
-  // TODO: use generalize instead?
-  auto vh {VisitHelper {
-    [](auto const& inner) { return TargetType {{inner}}; },
-  }};
-  return std::visit (vh, te.v);
-}
-
 auto
 strip_qualifiers (Type const& type) -> StrippedType
 {
@@ -556,11 +545,11 @@ check_simple_type (SimpleType const& from,
 {
   auto vh {VisitHelper {
     [](Const const& const_from,
-       Const const& const_to) { return check_simple_type (repackage (const_from),
-                                                          repackage (const_to)); },
+       Const const& const_to) { return check_simple_type (repackage<SimpleType> (const_from),
+                                                          repackage<SimpleType> (const_to)); },
     [](Pointer const& ptr_from,
-       Pointer const& ptr_to) { return check_simple_type (repackage (ptr_from),
-                                                          repackage (ptr_to)); },
+       Pointer const& ptr_to) { return check_simple_type (repackage<SimpleType> (ptr_from),
+                                                          repackage<SimpleType> (ptr_to)); },
     [](NullPointer const& /*from*/,
        Pointer const& /*to*/) { return true; },
     [](PlainType const& pt_from,
@@ -577,13 +566,13 @@ first_pointer (Pointer const& ptr_from,
 {
   auto vh {VisitHelper {
     [](Const const& const_from,
-       Const const& const_to) { return check_simple_type (repackage (const_from),
-                                                          repackage (const_to)); },
+       Const const& const_to) { return check_simple_type (repackage<SimpleType> (const_from),
+                                                          repackage<SimpleType> (const_to)); },
     [](Const const&,
        auto const&) { return false; },
     [](auto const& other_from,
        Const const& const_to) { return check_simple_type (SimpleType {{other_from}},
-                                                          repackage (const_to)); },
+                                                          repackage<SimpleType> (const_to)); },
     [](auto const& other_from,
        auto const& other_to) { return check_simple_type (SimpleType {{other_from}},
                                                          SimpleType {{other_to}}); },
@@ -608,6 +597,242 @@ type_is_convertible_to_type (Type const& from,
        auto const&) { return false; },
   }};
   return std::visit (vh, stripped_from.v, stripped_to.v);
+}
+
+namespace
+{
+
+namespace TB
+{
+
+namespace TopNS = ::Ggp::Lib;
+
+GGP_LIB_TRIVIAL_TYPE(Const);
+GGP_LIB_TRIVIAL_TYPE(Pointer);
+inline constexpr Const const_ {};
+inline constexpr Pointer pointer {};
+
+GGP_LIB_VARIANT_STRUCT_ONLY(TypeDecorator,
+                            Const,
+                            Pointer);
+
+struct BuiltType
+{
+  std::vector<TypeDecorator> decorators;
+  std::optional<PlainType> plain_type;
+
+  auto
+  is_pointer () const -> bool;
+};
+
+auto
+BuiltType::is_pointer () const -> bool
+{
+  auto last_is_const = false;
+
+  for (auto const& decorator : this->decorators)
+  {
+    if (std::holds_alternative<Pointer> (decorator.v))
+    {
+      return true;
+    }
+    if (last_is_const)
+    {
+      return false;
+    }
+    last_is_const = true;
+  }
+
+  return false;
+}
+
+GGP_LIB_VARIANT_STRUCT_ONLY(ResultType,
+                            BuiltType,
+                            Meh,
+                            NullPointer);
+
+GGP_LIB_VARIANT_STRUCT_ONLY(TempType,
+                            TopNS::Const,
+                            TopNS::Pointer,
+                            PlainType,
+                            Meh);
+
+} // namespace TB
+
+} // anonymous namespace
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsubobject-linkage"
+struct TypeBuilder::TypeBuilderPrivate
+{
+  TB::ResultType result_type;
+};
+#pragma GCC diagnostic pop
+
+TypeBuilder::TypeBuilder ()
+  : priv {new TypeBuilderPrivate ()}
+{}
+
+TypeBuilder::~TypeBuilder ()
+{}
+
+auto
+TypeBuilder::add_plain_type (PlainType plain_type) -> void
+{
+  auto failed = false;
+  auto vh {VisitHelper {
+    [plain_type = std::move (plain_type), &failed] (TB::BuiltType& built_type) mutable
+    {
+      failed = built_type.plain_type.has_value ();
+
+      if (!failed)
+      {
+        built_type.plain_type = std::make_optional (std::move (plain_type));
+      }
+    },
+    [](Meh&) {},
+    [](NullPointer&) {},
+  }};
+
+  std::visit (vh, this->priv->result_type.v);
+
+  if (failed)
+  {
+    this->priv->result_type.v = Meh {};
+  }
+}
+
+auto
+TypeBuilder::add_const () -> void
+{
+  auto vh {VisitHelper {
+    [](TB::BuiltType& built_type) { built_type.decorators.push_back ({{TB::const_}}); },
+    [](Meh&) {},
+    [](NullPointer&) {},
+  }};
+
+  std::visit (vh, this->priv->result_type.v);
+}
+
+auto
+TypeBuilder::add_pointer () -> void
+{
+  auto vh {VisitHelper {
+    [](TB::BuiltType& built_type) { built_type.decorators.push_back ({{TB::pointer}}); },
+    [](Meh&) {},
+    [](NullPointer&) {},
+  }};
+
+  std::visit (vh, this->priv->result_type.v);
+}
+
+auto
+TypeBuilder::add_meh () -> void
+{
+  this->priv->result_type.v = Meh {};
+}
+
+auto
+TypeBuilder::add_null_pointer () -> void
+{
+  auto failed = false;
+  auto vh {VisitHelper {
+    [&failed] (TB::BuiltType const& built_type) mutable
+    {
+      failed = !built_type.is_pointer ();
+    },
+    [](Meh&) {},
+    [](NullPointer&) {},
+  }};
+
+  std::visit (vh, this->priv->result_type.v);
+
+  if (failed)
+  {
+    this->priv->result_type.v = Meh {};
+  }
+  else
+  {
+    this->priv->result_type.v = NullPointer {};
+  }
+}
+
+auto
+TypeBuilder::build_type () const -> Type
+{
+  auto vh {VisitHelper {
+    [](TB::BuiltType const& built_type)
+    {
+      if (!built_type.plain_type)
+      {
+        return Type {{Meh {}}};
+      }
+
+      auto type {TB::TempType {{*built_type.plain_type}}};
+      auto add_const =
+        [](TB::TempType&& tmp_type) -> TB::TempType
+        {
+          auto inner_vh {VisitHelper {
+            [](Const&&) { return TB::TempType {{Meh {}}}; },
+            [](Pointer&& pointer)
+            {
+              return TB::TempType {{Const {{std::move (pointer)}}}};
+            },
+            [](PlainType&& plain_type)
+            {
+              return TB::TempType {{Const {{std::move (plain_type)}}}};
+            },
+            [](Meh&& meh) { return TB::TempType {{std::move (meh)}}; },
+          }};
+
+          return std::visit (inner_vh, std::move (tmp_type.v));
+        };
+      auto add_pointer =
+        [](TB::TempType&& tmp_type) -> TB::TempType
+        {
+          auto inner_vh {VisitHelper {
+            [](Const&& const_)
+            {
+              return TB::TempType {{Pointer {{std::move (const_)}}}};
+            },
+            [](Pointer&& pointer)
+            {
+              return TB::TempType {{Pointer {{std::move (pointer)}}}};
+            },
+            [](PlainType&& plain_type)
+            {
+              return TB::TempType {{Pointer {{std::move (plain_type)}}}};
+            },
+            [](Meh&& meh) { return TB::TempType {{std::move (meh)}}; },
+          }};
+
+          return std::visit (inner_vh, std::move (tmp_type.v));
+        };
+
+      for (auto const& decorator : reverse (built_type.decorators))
+      {
+        auto tmp {TB::TempType {std::move (type)}};
+        auto decorator_vh {VisitHelper {
+          [&tmp, &add_pointer](TB::Pointer const&)
+          {
+            return add_pointer (std::move (tmp));
+          },
+          [&tmp, &add_const](TB::Const const&)
+          {
+            return add_const (std::move (tmp));
+          },
+        }};
+
+        type = std::visit (decorator_vh, decorator.v);
+      }
+
+      return repackage<Type> (type);
+    },
+    [](Meh const& meh) { return Type {{meh}}; },
+    [](NullPointer const& null_pointer) { return Type {{null_pointer}}; },
+  }};
+
+  return std::visit (vh, this->priv->result_type.v);
 }
 
 } // namespace Ggp::Lib
