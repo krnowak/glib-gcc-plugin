@@ -292,11 +292,89 @@ auto
 tree_to_type (tree arg) -> Lib::Type {
   warning (0, "dump of a parameter");
   dump_node (arg, TDF_ADDRESS, stderr);
-  iterate_tree (arg, [](tree /*tree*/)
-                     {
-                       // TODO: see dumps to figure this out
-                     });
-  return {{Lib::Meh {}}};
+
+  Lib::TypeBuilder builder;
+
+  switch (TREE_CODE (arg))
+  {
+  case VAR_DECL:
+    {
+      auto gcc_type {TREE_TYPE (arg)};
+
+      switch (TREE_CODE (gcc_type))
+      {
+      case INTEGER_TYPE:
+        {
+          auto precision {TYPE_PRECISION (gcc_type)};
+
+          if (((precision % 8) != 0) ||
+              // precision in bytes larger than UINT8_MAX?
+              (precision > 2047))
+          {
+            warning (0, "weird precision %d", precision);
+            builder.add_meh ();
+          }
+          else
+          {
+            auto size_in_bytes {static_cast<std::uint8_t>(precision / 8)};
+            auto signedness {[](bool unsigned_)
+                             {
+                               if (unsigned_)
+                               {
+                                 return Lib::Signedness::Unsigned;
+                               }
+                               else
+                               {
+                                 return Lib::Signedness::Signed;
+                               }
+                             }(TYPE_UNSIGNED (gcc_type))};
+            auto name {IDENTIFIER_POINTER (DECL_NAME (TYPE_NAME (gcc_type)))};
+
+            if (name == nullptr)
+            {
+              builder.add_meh ();
+            }
+            else
+            {
+              auto plain_type {Lib::PlainType {{Lib::Integral {name, size_in_bytes, signedness}}}};
+
+              builder.add_plain_type (plain_type);
+            }
+          }
+        }
+        break;
+
+      case REAL_TYPE:
+        {
+        }
+        break;
+
+      default:
+        break;
+      }
+    }
+    break;
+
+  case NOP_EXPR:
+    // is this a cast? TREE_TYPE holds "foo" part of (foo)var, whereas
+    // OP0 holds the "var" part?
+    //
+    // is there a way to differentiate between explicit cast and
+    // implicit cast?
+    //
+    // explicit cast is like (int)foo, whereas implicit cast is when
+    // char is passed as a var arg to a function.
+    //
+    // it needs a special casing - in case of explicit cast, we want
+    // to check the correctness of the cast, in case of the implicit
+    // case - the correctness of the casted variable
+    break;
+
+  default:
+    break;
+  }
+
+  return builder.build_type ();
 }
 
 void
