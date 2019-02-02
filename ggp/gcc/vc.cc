@@ -288,86 +288,59 @@ auto get_format_args(CallSite const& call_site) -> std::optional<FormatArgs>
   return {{format_info.type, format, format_arg_params}};
 }
 
+struct Cast
+{
+  Lib::Type cast;
+  Lib::Type var;
+};
+
+GGP_LIB_VARIANT_STRUCT_ONLY(TypeFromTree,
+                            Cast,
+                            Lib::Type);
+
 auto
-tree_to_type (tree arg) -> Lib::Type {
-  warning (0, "dump of a parameter");
-  dump_node (arg, TDF_ADDRESS, stderr);
+type_tree_to_type (tree gcc_type) -> Lib::Type
+{
+  gcc_assert (TYPE_P (gcc_type));
 
   Lib::TypeBuilder builder;
 
-  switch (TREE_CODE (arg))
+  switch (TREE_CODE (gcc_type))
   {
-  case VAR_DECL:
+  case INTEGER_TYPE:
     {
-      auto gcc_type {TREE_TYPE (arg)};
+      auto precision {TYPE_PRECISION (gcc_type)};
 
-      switch (TREE_CODE (gcc_type))
+      if (((precision % 8) != 0) ||
+          // precision in bytes larger than UINT8_MAX?
+          (precision > 2047))
       {
-      case INTEGER_TYPE:
+        warning (0, "weird precision %d", precision);
+        builder.add_meh ();
+      }
+      else
+      {
+        auto size_in_bytes {static_cast<std::uint8_t>(precision / 8)};
+        auto signedness {TYPE_UNSIGNED (gcc_type) ?
+                         Lib::Signedness::Unsigned :
+                         Lib::Signedness::Signed};
+        auto name {IDENTIFIER_POINTER (DECL_NAME (TYPE_NAME (gcc_type)))};
+
+        if (name == nullptr)
         {
-          auto precision {TYPE_PRECISION (gcc_type)};
-
-          if (((precision % 8) != 0) ||
-              // precision in bytes larger than UINT8_MAX?
-              (precision > 2047))
-          {
-            warning (0, "weird precision %d", precision);
-            builder.add_meh ();
-          }
-          else
-          {
-            auto size_in_bytes {static_cast<std::uint8_t>(precision / 8)};
-            auto signedness {[](bool unsigned_)
-                             {
-                               if (unsigned_)
-                               {
-                                 return Lib::Signedness::Unsigned;
-                               }
-                               else
-                               {
-                                 return Lib::Signedness::Signed;
-                               }
-                             }(TYPE_UNSIGNED (gcc_type))};
-            auto name {IDENTIFIER_POINTER (DECL_NAME (TYPE_NAME (gcc_type)))};
-
-            if (name == nullptr)
-            {
-              builder.add_meh ();
-            }
-            else
-            {
-              auto plain_type {Lib::PlainType {{Lib::Integral {name, size_in_bytes, signedness}}}};
-
-              builder.add_plain_type (plain_type);
-            }
-          }
+          builder.add_meh ();
         }
-        break;
-
-      case REAL_TYPE:
+        else
         {
-        }
-        break;
+          auto plain_type {Lib::PlainType {{Lib::Integral {name, size_in_bytes, signedness}}}};
 
-      default:
-        break;
+          builder.add_plain_type (plain_type);
+        }
       }
     }
     break;
 
-  case NOP_EXPR:
-    // is this a cast? TREE_TYPE holds "foo" part of (foo)var, whereas
-    // OP0 holds the "var" part?
-    //
-    // is there a way to differentiate between explicit cast and
-    // implicit cast?
-    //
-    // explicit cast is like (int)foo, whereas implicit cast is when
-    // char is passed as a var arg to a function.
-    //
-    // it needs a special casing - in case of explicit cast, we want
-    // to check the correctness of the cast, in case of the implicit
-    // case - the correctness of the casted variable
+  case REAL_TYPE:
     break;
 
   default:
@@ -375,6 +348,55 @@ tree_to_type (tree arg) -> Lib::Type {
   }
 
   return builder.build_type ();
+}
+
+auto
+tree_to_type (tree arg) -> TypeFromTree {
+  warning (0, "dump of a parameter");
+  dump_node (arg, TDF_ADDRESS, stderr);
+
+  if (DECL_P (arg))
+  {
+    return {{type_tree_to_type (TREE_TYPE (arg))}};
+  }
+  else
+  {
+    switch (TREE_CODE (arg))
+    {
+    case NOP_EXPR:
+      // is this a cast? TREE_TYPE holds "foo" part of (foo)var, whereas
+      // OP0 holds the "var" part?
+      //
+      // is there a way to differentiate between explicit cast and
+      // implicit cast?
+      //
+      // explicit cast is like (int)foo, whereas implicit cast is when
+      // char is passed as a var arg to a function.
+      //
+      // it needs a special casing - in case of explicit cast, we want
+      // to check the correctness of the cast, in case of the implicit
+      // case - the correctness of the casted variable
+      {
+        auto cast_type {TREE_TYPE (arg)};
+        auto op0_tree {TREE_OPERAND (arg, 0)};
+
+        if (DECL_P (op0_tree))
+        {
+          return {{Cast {type_tree_to_type (cast_type), type_tree_to_type (TREE_TYPE (op0_tree))}}};
+        }
+      }
+      break;
+
+    case INTEGER_CST:
+      return {{type_tree_to_type (TREE_TYPE (arg))}};
+
+    default:
+      break;
+    }
+  }
+
+  Lib::TypeBuilder builder;
+  return {{builder.build_type ()}};
 }
 
 void
@@ -407,26 +429,52 @@ ggp_vc_finish_parse_function (void* gcc_data,
     auto const types = Lib::expected_types_for_format (*mvf);
     if (types.size() != maybe_format_args->args.size())
     {
-      warning (0, "expected %lu parameters, got %lu", types.size(), maybe_format_args->args.size());
+      warning (0,
+               "expected %lu parameters, got %lu",
+               types.size(),
+               maybe_format_args->args.size());
     }
-    auto pick_type = [](FormatType type) -> Lib::Type const& (*)(Lib::Types const&) {
-                       if (type == FormatType::New)
-                         return [](Lib::Types const& types) -> Lib::Type const&
-                         {
-                           return types.for_new;
-                         };
-                       else
-                         return [](Lib::Types const& types) -> Lib::Type const&
-                         {
-                          return types.for_get;
-                         };
-                     }(maybe_format_args->type);
+    auto pick_type {
+      [](FormatType type) -> Lib::Type const& (*)(Lib::Types const&)
+      {
+        if (type == FormatType::New)
+        {
+          return
+            [](Lib::Types const& types) -> Lib::Type const&
+            {
+              return types.for_new;
+            };
+        }
+        else
+        {
+          return
+            [](Lib::Types const& types) -> Lib::Type const&
+            {
+              return types.for_get;
+            };
+        }
+      }(maybe_format_args->type)
+    };
+
     for (auto idx {0u}; idx < types.size (); ++idx)
     {
-      if (!Lib::type_is_convertible_to_type (tree_to_type (maybe_format_args->args[idx]), pick_type (types[idx])))
-      {
-        warning (0, "invalid arg %u", idx);
-      }
+      auto picked_type {pick_type (types[idx])};
+      auto vh { Lib::VisitHelper {
+        [&picked_type, idx](Lib::Type const& type)
+        {
+          if (!Lib::type_is_convertible_to_type (type, picked_type))
+          {
+            warning (0, "invalid arg %u", idx);
+          }
+        },
+        [&picked_type, idx](Cast const& /*cast*/)
+        {
+          // TODO: make a list of possible cases
+          warning (0, "not handling the casts yet in %d", idx);
+        }
+      }};
+
+      std::visit (vh, tree_to_type (maybe_format_args->args[idx]).v);
     }
   }
 }

@@ -42,6 +42,6 @@ bar (void)
   guchar c = 13;
   gint32 i = 42;
   //const gchar *foo = NULL;
-  GVariant *v = variant_new (33, "(iy)", i, c);
+  GVariant *v = variant_new (33, "(iyytts)", i, c, (guchar)(c), (guint64)(c), (guint64)42, "foo");
   //extern_variant_get (1, "(dms&st)", &d, NULL, &foo, (unsigned long long)5);
 }
