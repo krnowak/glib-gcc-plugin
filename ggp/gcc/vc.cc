@@ -341,6 +341,33 @@ type_tree_to_type (tree gcc_type) -> Lib::Type
     break;
 
   case REAL_TYPE:
+    {
+      auto precision {TYPE_PRECISION (gcc_type)};
+
+      if (((precision % 8) != 0) ||
+          // precision in bytes larger than UINT8_MAX?
+          (precision > 2047))
+      {
+        warning (0, "weird precision %d", precision);
+        builder.add_meh ();
+      }
+      else
+      {
+        auto size_in_bytes {static_cast<std::uint8_t>(precision / 8)};
+        auto name {IDENTIFIER_POINTER (DECL_NAME (TYPE_NAME (gcc_type)))};
+
+        if (name == nullptr)
+        {
+          builder.add_meh ();
+        }
+        else
+        {
+          auto plain_type {Lib::PlainType {{Lib::Real {name, size_in_bytes}}}};
+
+          builder.add_plain_type (plain_type);
+        }
+      }
+    }
     break;
 
   default:
@@ -388,6 +415,7 @@ tree_to_type (tree arg) -> TypeFromTree {
       break;
 
     case INTEGER_CST:
+    case REAL_CST:
       return {{type_tree_to_type (TREE_TYPE (arg))}};
 
     default:
@@ -469,7 +497,39 @@ ggp_vc_finish_parse_function (void* gcc_data,
         },
         [&picked_type, idx](Cast const& /*cast*/)
         {
+          // TODO: this implies that int is 32 bits, make it generic
+          // perhaps?
+          //
+          // varargs type promotions/decays:
+          // guchar, gint16, guint16 -> int
+          // gfloat -> gdouble
+          // gcc pointer to gcc array of integer type elts -> gcc pointer to integer type elts
+          //
+          // variant type -> (cast)type -> gcc_op, … -> result
+          // y -> (-)guchar -> nop(int, guchar) ->
+          // y -> (-)gchar -> nop(int, gchar) ->
+          // y -> (-)gint32 -> nop(int, gint32) ->
+          // y -> (gint32)guchar -> nop(int(!), guchar) ->
+          // y -> (gint32)gchar -> nop(int(!), gchar) ->
+          // i -> (-)gint32 -> decl(gint32) -> ok
+          // i -> (gint32)guchar -> nop(int(!), guchar) ->
+          // i -> (-)guchar -> nop(int, guchar) ->
+          // u -> (-)guint32 -> decl(guint32) ->
+          // u -> (-)guchar -> nop(int(!), guchar) ->
+          // u -> (guint32)guchar -> nop(unsigned int(!), guchar) ->
+          // s -> (-)"raw_string" -> nop(pointer(char), addr(pointer(array(char)))) ->
+          // s -> (-)const gchar* -> decl(pointer(const gchar)) ->
+          // s -> (-)gchar* -> decl(pointer(gchar)) ->
+          // d -> (-)gfloat -> nop(double, gfloat) ->
+          // d -> (-)gdouble -> decl(gdouble) ->
+          // d -> (gdouble)gfloat -> nop(double(!), gfloat) ->
+          //
           // TODO: make a list of possible cases
+          //
+          // TODO: write a patch to gcc that introduces an explicit
+          // flag to nop_expr and nop_expr cascade like:
+          //
+          // nop(implicit, int, nop(explicit, gint32, guchar))
           warning (0, "not handling the casts yet in %d", idx);
         }
       }};
